@@ -1,15 +1,7 @@
 use super::telegram_api::*;
 use base64::encode;
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::env;
-
-lazy_static! {
-    static ref TRANSMISSION_ADDDRESS: String = {
-        env::var("TRANSMISSION_ADDDRESS")
-            .expect("Provide TRANSMISSION_ADDDRESS environment variable please")
-    };
-}
 
 pub struct TorrentFilter<'a> {
     telegram_client: &'a TelegramClient,
@@ -24,15 +16,13 @@ impl<'a> super::Filter for TorrentFilter<'a> {
                 ..
             } => self
                 .telegram_client
-                .send_message(message.chat.id, format!("{} успешно добавлен", n))
-                .into(),
+                .send_message(message.chat.id, format!("{} успешно добавлен", n)),
             Response {
                 arguments: ResponseArguments::TorerntDuplicate { name: n, .. },
                 ..
             } => self
                 .telegram_client
-                .send_message(message.chat.id, format!("{} уже был добавлен ранее", n))
-                .into(),
+                .send_message(message.chat.id, format!("{} уже был добавлен ранее", n)),
         };
 
         match message {
@@ -41,8 +31,7 @@ impl<'a> super::Filter for TorrentFilter<'a> {
                 ..
             } if doc.file_name.ends_with(".torrent") => self
                 .process_torrent(&doc.file_id)
-                .and_then(process_success)
-                .into(),
+                .and_then(process_success),
             _ => Ok(()),
         }
     }
@@ -127,19 +116,18 @@ impl TransmissionClient {
         {
             Ok(r) if r.status() == reqwest::StatusCode::CONFLICT => {
                 if let Some(session_id) = r.headers().get("X-Transmission-Session-Id") {
-                    self.http_client
+                    Ok(self.http_client
                         .post(&self.transmission_address)
                         .body(serde_json::to_string(&request)?)
                         .header("X-Transmission-Session-Id", session_id.to_str()?)
-                        .send()
-                        .map_err(|e| e.into())
+                        .send()?)
                 } else {
                     Ok(r)
                 }
             }
-            r => r.map_err(|e| e.into()),
+            r => Ok(r?)
         };
-        resp?.json().map_err(|e| e.into())
+        Ok(resp?.json()?)
     }
 
     pub fn torrent_add(&self, file_content: &[u8]) -> RequestResult<Response> {

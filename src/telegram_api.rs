@@ -150,13 +150,12 @@ impl TelegramClient {
         body.insert("chat_id".to_string(), chat_id.to_string());
         body.insert("text".to_string(), text);
         let json_body = serde_json::to_string(&body);
-        self.http_client
+        Ok(self.http_client
             .post(&self.api_url("sendMessage"))
             .body(json_body?)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .send()
-            .map_err(|e| e.into())
-            .map(|_| ())
+            .map(|_| ())?)
     }
 
     pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes, FileDownloadError> {
