@@ -2,7 +2,7 @@ use super::telegram_api::*;
 use base64::encode;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::{env, fs};
+use std::env;
 
 lazy_static! {
     static ref TRANSMISSION_ADDDRESS: String = {
