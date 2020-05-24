@@ -1,4 +1,4 @@
-use super::telegram_api::*;
+use crate::telegram_api::*;
 use base64::encode;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -8,7 +8,7 @@ pub struct TorrentFilter<'a> {
     transmission_client: TransmissionClient,
 }
 
-impl<'a> super::Filter for TorrentFilter<'a> {
+impl<'a> crate::Filter for TorrentFilter<'a> {
     fn process(&self, message: &Message) -> Result<(), Box<dyn std::error::Error>> {
         let process_success = |r: Response| match r {
             Response {

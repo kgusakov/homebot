@@ -1,7 +1,9 @@
 #[macro_use] extern crate log;
 
 mod telegram_api;
-mod torrent;
+mod handlers;
+
+use handlers::torrent;
 
 use std::env;
 use std::fs::OpenOptions;
