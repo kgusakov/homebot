@@ -4,6 +4,7 @@ mod telegram_api;
 mod handlers;
 
 use handlers::torrent;
+use handlers::healthcheck;
 
 use std::env;
 use std::fs::OpenOptions;
@@ -42,7 +43,10 @@ fn main() {
         contents.trim().parse::<i32>().expect("Bot state is corrupted")
     };
 
-    let filters = vec![Box::new(torrent::TorrentFilter::new(&telegram_client))];
+    let filters: Vec<Box<dyn Filter>> = vec![
+        Box::new(torrent::TorrentFilter::new(&telegram_client)),
+        Box::new(healthcheck::HealthCheckFilter::new(&telegram_client))
+    ];
 
     loop {
         match telegram_client.get_updates(update_id + 1) {
