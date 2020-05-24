@@ -1,7 +1,6 @@
 use bytes::Bytes;
 use reqwest::blocking::get;
 use serde::Deserialize;
-use std::fmt;
 
 #[derive(Debug, Deserialize)]
 pub struct TelegramResponse<T> {
@@ -61,49 +60,6 @@ pub struct TelegramClient {
     http_client: reqwest::blocking::Client,
 }
 
-#[derive(Debug)]
-pub enum FileDownloadError {
-    IoError(std::io::Error),
-    HttpError(reqwest::Error),
-}
-
-impl From<std::io::Error> for FileDownloadError {
-    fn from(err: std::io::Error) -> Self {
-        FileDownloadError::IoError(err)
-    }
-}
-
-impl From<reqwest::Error> for FileDownloadError {
-    fn from(err: reqwest::Error) -> Self {
-        FileDownloadError::HttpError(err)
-    }
-}
-
-impl fmt::Display for FileDownloadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let cause_error_msg = match self {
-            FileDownloadError::IoError(e) => format!("{}", e),
-            FileDownloadError::HttpError(e) => format!("{}", e),
-        };
-        write!(
-            f,
-            "Error while trying to process telegram client call {}",
-            cause_error_msg
-        )
-    }
-}
-
-// This is important for other errors to wrap this one.
-impl std::error::Error for FileDownloadError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        // Generic error, underlying cause isn't tracked.
-        match self {
-            FileDownloadError::IoError(e) => Some(e),
-            FileDownloadError::HttpError(e) => Some(e),
-        }
-    }
-}
-
 impl TelegramClient {
     const BASE_TELEGRAM_API_URL: &'static str = "https://api.telegram.org/bot";
     const BASE_FILE_TELEGRAM_API_URL: &'static str = "https://api.telegram.org/file/bot";
@@ -158,7 +114,7 @@ impl TelegramClient {
             .map(|_| ())?)
     }
 
-    pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes, FileDownloadError> {
+    pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes, Box<dyn std::error::Error>> {
         Ok(get(&self.file_api_url(file_path))?.bytes()?)
     }
 }
