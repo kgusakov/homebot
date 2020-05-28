@@ -171,6 +171,6 @@ fn test_torrent_add_by_metainfo() {
     );
     let client = TransmissionClient::new();
 
-    let file_content = fs::read("/Users/kirill/tt.torrent").unwrap();
+    let file_content = std::fs::read("/Users/kirill/tt.torrent").unwrap();
     assert!(client.torrent_add(&file_content).is_ok());
 }

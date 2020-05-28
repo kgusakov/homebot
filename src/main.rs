@@ -13,6 +13,7 @@ use std::io::Read;
 use std::io::Write;
 
 pub type ProcessingResult = Result<(), Box<dyn std::error::Error>>;
+pub type BResult<T> = std::result::Result<T,  Box<dyn std::error::Error>>;
 
 trait Filter {
     fn process(&self, m: &Message) -> ProcessingResult;

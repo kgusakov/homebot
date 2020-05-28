@@ -19,3 +19,10 @@ bytes = "0.5.4"
 serde_json = "1.0"
 
 base64 = "0.12.1"
+
+rusoto_s3 = "0.42"
+rusoto_core = "0.42"
+
+regex = "1"
+
+futures = "0.3"
