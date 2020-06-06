@@ -10,7 +10,8 @@ use std::{
   error,
   fmt,
   time::SystemTime,
-  fs
+  fs,
+  collections::VecDeque
 };
 use youtube_sdk::YoutubeSdk;
 use crate::{BResult, Filter, ProcessingResult, Message, User, TelegramClient};
@@ -151,10 +152,8 @@ impl<'a> PodcastFilter<'a> {
       };
       let mut metadata =
         self.metadata.load_metadata(&metadata_path(&username))?;
-      metadata.push(video_metadata);
-
-      
-      self.s3_client.upload_file(&downloaded_file_path, &format!("{}/{}.mp3", data_path(&username), &video_id))?;
+      metadata.push_front(video_metadata);
+      self.metadata.update_metadata(&metadata_path(&username), &metadata)?;
 
       let rss = Self::generate_rss(&username, &metadata)?;
       self.s3_client.upload_object(rss.into_bytes(), &rss_path(&username))?;
@@ -165,7 +164,7 @@ impl<'a> PodcastFilter<'a> {
     }
   }
 
-  fn generate_rss(user: &str, metadata: &Vec<VideoMetadata>) -> Result<String, Box<dyn std::error::Error>> {
+  fn generate_rss(user: &str, metadata: &VecDeque<VideoMetadata>) -> Result<String, Box<dyn std::error::Error>> {
     let mut items = vec![];
     for item in metadata {
         let mut ritem = RItem::default();
