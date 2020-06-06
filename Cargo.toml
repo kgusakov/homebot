@@ -26,3 +26,9 @@ rusoto_core = "0.42"
 regex = "1"
 
 futures = "0.3"
+
+rmp-serde = "0.14.3"
+
+rss = "1.9.0"
+
+anyhow = "1.0.31"

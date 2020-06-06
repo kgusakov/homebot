@@ -5,6 +5,7 @@ mod handlers;
 
 use handlers::torrent;
 use handlers::healthcheck;
+use handlers::youtube2rss;
 
 use std::env;
 use std::fs::OpenOptions;
@@ -46,7 +47,8 @@ fn main() {
 
     let filters: Vec<Box<dyn Filter>> = vec![
         Box::new(torrent::TorrentFilter::new(&telegram_client)),
-        Box::new(healthcheck::HealthCheckFilter::new(&telegram_client))
+        Box::new(healthcheck::HealthCheckFilter::new(&telegram_client)),
+        Box::new(youtube2rss::PodcastFilter::new(&telegram_client))
     ];
 
     loop {
