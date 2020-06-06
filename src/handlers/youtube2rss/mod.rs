@@ -23,6 +23,9 @@ use regex::Regex;
 use rss::ChannelBuilder;
 use rss::{Item as RItem, Enclosure};
 
+use chrono::offset::Utc;
+use chrono::DateTime;
+
 
 fn metadata_path(user: &str) -> String {
   format!("{}/metadata.mp", user)
@@ -167,8 +170,10 @@ impl<'a> PodcastFilter<'a> {
   fn generate_rss(user: &str, metadata: &VecDeque<VideoMetadata>) -> Result<String, Box<dyn std::error::Error>> {
     let mut items = vec![];
     for item in metadata {
+        let pub_date: DateTime<Utc> = item.created_at.into();
         let mut ritem = RItem::default();
         ritem.set_title(item.name.to_string());
+        ritem.set_pub_date(pub_date.to_rfc2822());
         let mut enc = Enclosure::default();
         enc.set_mime_type("audio/mp3");
         enc.set_url(item.file_url.to_string());
