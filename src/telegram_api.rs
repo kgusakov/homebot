@@ -97,16 +97,13 @@ impl TelegramClient {
         get(&self.api_url(&format!("getFile?file_id={}", file_id)))?.json()
     }
 
-    pub fn send_message(
-        &self,
-        chat_id: i64,
-        text: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn send_message(&self, chat_id: i64, text: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut body = std::collections::HashMap::<&str, String>::new();
         body.insert("chat_id", chat_id.to_string());
         body.insert("text", text.to_string());
         let json_body = serde_json::to_string(&body);
-        Ok(self.http_client
+        Ok(self
+            .http_client
             .post(&self.api_url("sendMessage"))
             .body(json_body?)
             .header(reqwest::header::CONTENT_TYPE, "application/json")

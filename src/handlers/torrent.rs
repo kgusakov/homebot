@@ -29,9 +29,9 @@ impl<'a> crate::Filter for TorrentFilter<'a> {
             Message {
                 document: Some(doc),
                 ..
-            } if doc.file_name.ends_with(".torrent") => self
-                .process_torrent(&doc.file_id)
-                .and_then(process_success),
+            } if doc.file_name.ends_with(".torrent") => {
+                self.process_torrent(&doc.file_id).and_then(process_success)
+            }
             _ => Ok(()),
         }
     }
@@ -116,7 +116,8 @@ impl TransmissionClient {
         {
             Ok(r) if r.status() == reqwest::StatusCode::CONFLICT => {
                 if let Some(session_id) = r.headers().get("X-Transmission-Session-Id") {
-                    Ok(self.http_client
+                    Ok(self
+                        .http_client
                         .post(&self.transmission_address)
                         .body(serde_json::to_string(&request)?)
                         .header("X-Transmission-Session-Id", session_id.to_str()?)
@@ -125,7 +126,7 @@ impl TransmissionClient {
                     Ok(r)
                 }
             }
-            r => Ok(r?)
+            r => Ok(r?),
         };
         Ok(resp?.json()?)
     }
