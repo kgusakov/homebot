@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use reqwest::blocking::get;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -90,11 +89,17 @@ impl TelegramClient {
     }
 
     pub fn get_updates(&self, update_id: i32) -> reqwest::Result<TelegramResponse<Vec<Update>>> {
-        get(&self.api_url(&format!("getUpdates?offset={:?}", update_id)))?.json()
+        self.http_client
+            .get(&self.api_url(&format!("getUpdates?offset={:?}", update_id)))
+            .send()?
+            .json()
     }
 
     pub fn get_file(&self, file_id: &str) -> reqwest::Result<TelegramResponse<File>> {
-        get(&self.api_url(&format!("getFile?file_id={}", file_id)))?.json()
+        self.http_client
+            .get(&self.api_url(&format!("getFile?file_id={}", file_id)))
+            .send()?
+            .json()
     }
 
     pub fn send_message(&self, chat_id: i64, text: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -112,6 +117,10 @@ impl TelegramClient {
     }
 
     pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes, Box<dyn std::error::Error>> {
-        Ok(get(&self.file_api_url(file_path))?.bytes()?)
+        Ok(self
+            .http_client
+            .get(&self.file_api_url(file_path))
+            .send()?
+            .bytes()?)
     }
 }
