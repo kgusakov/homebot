@@ -4,12 +4,17 @@ use base64::encode;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-pub struct TorrentFilter<'a> {
+pub struct TorrentHandler<'a> {
     telegram_client: &'a TelegramClient,
     transmission_client: TransmissionClient,
 }
 
-impl<'a> crate::Filter for TorrentFilter<'a> {
+impl<'a> crate::Handler for TorrentHandler<'a> {
+
+    fn name(&self) -> String {
+        String::from("TransmissionClient")
+    }
+
     fn process(&self, message: &Message) -> Result<()> {
         let process_success = |r: Response| match r {
             Response {
@@ -38,7 +43,7 @@ impl<'a> crate::Filter for TorrentFilter<'a> {
     }
 }
 
-impl<'a> TorrentFilter<'a> {
+impl<'a> TorrentHandler<'a> {
     pub fn new(telegram_client: &'a TelegramClient) -> Self {
         Self {
             telegram_client,

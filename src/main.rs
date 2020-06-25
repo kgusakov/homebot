@@ -9,13 +9,16 @@ use handlers::torrent;
 use handlers::youtube2rss;
 
 use anyhow::Result;
+
 use std::env;
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
 use telegram_api::*;
 
-trait Filter {
+trait Handler {
+    fn name(&self) -> String;
+
     fn process(&self, m: &Message) -> Result<()>;
 }
 
@@ -46,10 +49,10 @@ fn main() {
             .expect("Bot state is corrupted")
     };
 
-    let filters: Vec<Box<dyn Filter>> = vec![
-        Box::new(torrent::TorrentFilter::new(&telegram_client)),
-        Box::new(healthcheck::HealthCheckFilter::new(&telegram_client)),
-        Box::new(youtube2rss::PodcastFilter::new(&telegram_client)),
+    let filters: Vec<Box<dyn Handler>> = vec![
+        Box::new(torrent::TorrentHandler::new(&telegram_client)),
+        Box::new(healthcheck::HealthCheckHandler::new(&telegram_client)),
+        Box::new(youtube2rss::PodcastHandler::new(&telegram_client)),
     ];
 
     loop {
@@ -74,15 +77,15 @@ fn main() {
 
 fn process_updates<'a, T: ?Sized>(updates: &Vec<Update>, handlers: &Vec<Box<T>>)
 where
-    T: Filter,
+    T: Handler,
 {
     for update in updates.iter() {
         for handler in handlers.iter() {
             match handler.process(&update.message) {
                 Ok(_) => (),
                 Err(e) => error!(
-                    "Problem while processing update {:?} error: {:?}",
-                    &update.message, e
+                    "Problem while processing update {:?} by handler {} with error: {:?}",
+                    &update.message, handler.name(), e
                 ),
             }
         }

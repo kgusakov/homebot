@@ -2,7 +2,7 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use crate::{Filter, Message, TelegramClient, User};
+use crate::{Handler, Message, TelegramClient, User};
 use s3_storage::S3Storage;
 use std::{
     collections::VecDeque,
@@ -38,7 +38,7 @@ fn rss_path(user: &str) -> String {
     format!("{}/feed.xml", user)
 }
 
-pub struct PodcastFilter<'a> {
+pub struct PodcastHandler<'a> {
     youtube_extractor: String,
     youtube_sdk: YoutubeSdk,
     id_regex: Regex,
@@ -48,7 +48,7 @@ pub struct PodcastFilter<'a> {
     telegram_client: &'a TelegramClient,
 }
 
-impl<'a> PodcastFilter<'a> {
+impl<'a> PodcastHandler<'a> {
     pub fn new(telegram_client: &'a TelegramClient) -> Self {
         let youtube_extractor = {
             env::var("YOUTUBE_EXTRACTOR")
@@ -186,7 +186,12 @@ impl<'a> PodcastFilter<'a> {
     }
 }
 
-impl<'a> Filter for PodcastFilter<'a> {
+impl<'a> Handler for PodcastHandler<'a> {
+
+    fn name(&self) -> String {
+        String::from("Youtube2Rss")
+    }
+
     fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
             Some(s)
