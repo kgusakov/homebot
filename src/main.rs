@@ -8,17 +8,15 @@ use handlers::healthcheck;
 use handlers::torrent;
 use handlers::youtube2rss;
 
+use anyhow::Result;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
 use telegram_api::*;
 
-pub type ProcessingResult = Result<(), Box<dyn std::error::Error>>;
-pub type BResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
 trait Filter {
-    fn process(&self, m: &Message) -> ProcessingResult;
+    fn process(&self, m: &Message) -> Result<()>;
 }
 
 fn main() {

@@ -1,4 +1,4 @@
-use anyhow;
+use anyhow::{Context, Result};
 use rusoto_s3::{GetObjectRequest, PutObjectRequest, S3Client, S3};
 use std::env;
 use std::fs::File;
@@ -29,7 +29,7 @@ impl S3Storage {
         }
     }
 
-    pub fn download_object(&self, s3_path: &str) -> anyhow::Result<Vec<u8>> {
+    pub fn download_object(&self, s3_path: &str) -> Result<Vec<u8>> {
         let response = self
             .s3_client
             .get_object(GetObjectRequest {
@@ -37,21 +37,31 @@ impl S3Storage {
                 key: s3_path.to_string(),
                 ..Default::default()
             })
-            .sync()?;
+            .sync()
+            .with_context(|| {
+                format!(
+                    "Can't GetObject with the path '{}' for downloading",
+                    s3_path
+                )
+            })?;
         if let Some(stream) = response.body {
             let mut buf = Vec::new();
-            stream.into_blocking_read().read_to_end(&mut buf)?;
+            stream
+                .into_blocking_read()
+                .read_to_end(&mut buf)
+                .with_context(|| {
+                    format!(
+                        "Failed to read response body for downloading the object {}",
+                        s3_path
+                    )
+                })?;
             Ok(buf)
         } else {
             Ok(Vec::new())
         }
     }
 
-    pub fn upload_object(
-        &self,
-        data: Vec<u8>,
-        s3_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn upload_object(&self, data: Vec<u8>, s3_path: &str) -> anyhow::Result<()> {
         Ok(self
             .s3_client
             .put_object(PutObjectRequest {
@@ -61,16 +71,26 @@ impl S3Storage {
                 ..Default::default()
             })
             .sync()
+            .with_context(|| format!("Failed to upload the object {}", s3_path))
             .map(|_| ())?)
     }
 
-    pub fn upload_file(
-        &self,
-        file: &Path,
-        s3_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn upload_file(&self, file: &Path, s3_path: &str) -> Result<()> {
         let mut body: Vec<u8> = vec![];
-        File::open(file)?.read_to_end(&mut body)?;
+        File::open(file)
+            .with_context(|| {
+                format!(
+                    "Failed to open file during file upload to the path {}",
+                    s3_path
+                )
+            })?
+            .read_to_end(&mut body)
+            .with_context(|| {
+                format!(
+                    "Failed to read file during file upload to the path {}",
+                    s3_path
+                )
+            })?;
         Ok(self
             .s3_client
             .put_object(PutObjectRequest {
@@ -80,6 +100,7 @@ impl S3Storage {
                 ..Default::default()
             })
             .sync()
+            .with_context(|| format!("Failed to put object {}", s3_path))
             .map(|_| ())?)
     }
 

@@ -1,4 +1,5 @@
 use crate::telegram_api::*;
+use anyhow::{Context, Result};
 use base64::encode;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -9,7 +10,7 @@ pub struct TorrentFilter<'a> {
 }
 
 impl<'a> crate::Filter for TorrentFilter<'a> {
-    fn process(&self, message: &Message) -> Result<(), Box<dyn std::error::Error>> {
+    fn process(&self, message: &Message) -> Result<()> {
         let process_success = |r: Response| match r {
             Response {
                 arguments: ResponseArguments::TorerntAdded { name: n, .. },
@@ -45,7 +46,7 @@ impl<'a> TorrentFilter<'a> {
         }
     }
 
-    fn process_torrent(&self, file_id: &str) -> RequestResult<Response> {
+    fn process_torrent(&self, file_id: &str) -> Result<Response> {
         let response = self.telegram_client.get_file(file_id)?;
         let content = self
             .telegram_client
@@ -90,8 +91,6 @@ enum ResponseArguments {
     TorerntAdded { id: i32, name: String },
 }
 
-type RequestResult<T> = Result<T, Box<dyn std::error::Error>>;
-
 impl TransmissionClient {
     fn new() -> Self {
         let transmission_address = {
@@ -107,13 +106,23 @@ impl TransmissionClient {
     fn req_with_sessions_id_loop<T: serde::de::DeserializeOwned>(
         &self,
         request: Request,
-    ) -> RequestResult<T> {
-        let resp: Result<reqwest::blocking::Response, Box<dyn std::error::Error>> = match self
+    ) -> Result<T> {
+        // TODO: success session id should be persisted
+        let first_try_resp: Result<reqwest::blocking::Response> = self
             .http_client
             .post(&self.transmission_address)
-            .body(serde_json::to_string(&request)?)
+            .body(
+                serde_json::to_string(&request)
+                    .with_context(|| format!("Failed to serialize request {:?}", request))?,
+            )
             .send()
-        {
+            .with_context(|| {
+                format!(
+                    "Failed to send http post request to transmission api {:?}",
+                    request
+                )
+            });
+        let result = match first_try_resp {
             Ok(r) if r.status() == reqwest::StatusCode::CONFLICT => {
                 if let Some(session_id) = r.headers().get("X-Transmission-Session-Id") {
                     Ok(self
@@ -121,17 +130,20 @@ impl TransmissionClient {
                         .post(&self.transmission_address)
                         .body(serde_json::to_string(&request)?)
                         .header("X-Transmission-Session-Id", session_id.to_str()?)
-                        .send()?)
+                        .send()
+                        .with_context(|| format!("Failed to send http post request to transmission api with correct session-id {:?}", request))?)
                 } else {
                     Ok(r)
                 }
             }
-            r => Ok(r?),
+            r => r,
         };
-        Ok(resp?.json()?)
+        Ok(result?
+            .json()
+            .with_context(|| format!("Failed to parse result for request {:?}", request))?)
     }
 
-    pub fn torrent_add(&self, file_content: &[u8]) -> RequestResult<Response> {
+    pub fn torrent_add(&self, file_content: &[u8]) -> Result<Response> {
         let base64_encoded = encode(file_content);
         let request = Request {
             method: "torrent-add".to_string(),
@@ -143,35 +155,4 @@ impl TransmissionClient {
 
         self.req_with_sessions_id_loop(request)
     }
-}
-
-#[test]
-fn test_torrent_add_by_file_path() {
-    env::set_var(
-        "TRANSMISSION_ADDRESS",
-        "http://192.168.1.104:9091/transmission/rpc",
-    );
-    let client = TransmissionClient::new();
-
-    let request = Request {
-        method: "torrent-add".to_string(),
-        arguments: RequestArguments::TorrentAdd {
-            filename: Some("/home/kgusakov/tt.torrent".to_string()),
-            metainfo: None,
-        },
-    };
-    let r = client.req_with_sessions_id_loop::<Response>(request);
-    assert!(r.is_ok())
-}
-
-#[test]
-fn test_torrent_add_by_metainfo() {
-    env::set_var(
-        "TRANSMISSION_ADDRESS",
-        "http://192.168.1.104:9091/transmission/rpc",
-    );
-    let client = TransmissionClient::new();
-
-    let file_content = std::fs::read("/Users/kirill/tt.torrent").unwrap();
-    assert!(client.torrent_add(&file_content).is_ok());
 }

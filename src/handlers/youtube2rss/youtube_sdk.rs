@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::{collections::VecDeque, env::var};
@@ -39,15 +40,28 @@ impl YoutubeSdk {
         }
     }
 
-    pub fn get_video_info(
-        &self,
-        video_id: &str,
-    ) -> Result<Option<Snippet>, Box<dyn std::error::Error>> {
+    pub fn get_video_info(&self, video_id: &str) -> Result<Option<Snippet>> {
         let url = format!(
             "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}",
             video_id, self.api_key
         );
-        let mut resp: Resp = self.http_client.get(&url).send()?.json()?;
+        let mut resp: Resp = self
+            .http_client
+            .get(&url)
+            .send()
+            .with_context(|| {
+                format!(
+                    "Failed to send request for getting video info with id {}",
+                    video_id
+                )
+            })?
+            .json()
+            .with_context(|| {
+                format!(
+                    "Failed to deserialize result of video info request with id {}",
+                    video_id
+                )
+            })?;
         Ok(resp.items.pop_front().map(|i| i.snippet))
     }
 }

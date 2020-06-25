@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use bytes::Bytes;
 use serde::Deserialize;
 
@@ -88,39 +89,76 @@ impl TelegramClient {
         }
     }
 
-    pub fn get_updates(&self, update_id: i32) -> reqwest::Result<TelegramResponse<Vec<Update>>> {
+    pub fn get_updates(&self, update_id: i32) -> Result<TelegramResponse<Vec<Update>>> {
         self.http_client
             .get(&self.api_url(&format!("getUpdates?offset={:?}", update_id)))
-            .send()?
+            .send()
+            .with_context(|| format!("Failed to receive updates from offset id {}", update_id))?
             .json()
+            .with_context(|| {
+                format!(
+                    "Failed to parse response for getting updates with from the offset {}",
+                    update_id
+                )
+            })
     }
 
-    pub fn get_file(&self, file_id: &str) -> reqwest::Result<TelegramResponse<File>> {
+    pub fn get_file(&self, file_id: &str) -> Result<TelegramResponse<File>> {
         self.http_client
             .get(&self.api_url(&format!("getFile?file_id={}", file_id)))
-            .send()?
+            .send()
+            .with_context(|| format!("Failed to get file with id {}", file_id))?
             .json()
+            .with_context(|| {
+                format!(
+                    "Failed to parse response for getting file with id {}",
+                    file_id
+                )
+            })
     }
 
-    pub fn send_message(&self, chat_id: i64, text: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn send_message(&self, chat_id: i64, text: &str) -> Result<()> {
         let mut body = std::collections::HashMap::<&str, String>::new();
         body.insert("chat_id", chat_id.to_string());
         body.insert("text", text.to_string());
-        let json_body = serde_json::to_string(&body);
+        let json_body = serde_json::to_string(&body).with_context(|| {
+            format!(
+                "Failed to serialize body to json for sending message {:?}",
+                body
+            )
+        });
         Ok(self
             .http_client
             .post(&self.api_url("sendMessage"))
             .body(json_body?)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .send()
+            .with_context(|| {
+                format!(
+                    "Failed to send the message for chat id {} with text {}",
+                    chat_id, text
+                )
+            })
             .map(|_| ())?)
     }
 
-    pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes, Box<dyn std::error::Error>> {
+    pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes> {
         Ok(self
             .http_client
             .get(&self.file_api_url(file_path))
-            .send()?
-            .bytes()?)
+            .send()
+            .with_context(|| {
+                format!(
+                    "Failed to send telegram api request for file download with path {}",
+                    file_path
+                )
+            })?
+            .bytes()
+            .with_context(|| {
+                format!(
+                    "Failed to get bytes for file download request with path {}",
+                    file_path
+                )
+            })?)
     }
 }

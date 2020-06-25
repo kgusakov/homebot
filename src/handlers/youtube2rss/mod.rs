@@ -2,11 +2,11 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use crate::{BResult, Filter, Message, ProcessingResult, TelegramClient, User};
+use crate::{Filter, Message, TelegramClient, User};
 use s3_storage::S3Storage;
 use std::{
     collections::VecDeque,
-    env, error, fmt, fs,
+    env, fs,
     path::Path,
     process::{Command, Output},
     time::SystemTime,
@@ -22,6 +22,9 @@ use rss::{Enclosure, Item as RItem};
 
 use chrono::offset::Utc;
 use chrono::DateTime;
+
+use anyhow::anyhow;
+use anyhow::{Context, Result};
 
 fn metadata_path(user: &str) -> String {
     format!("{}/metadata.mp", user)
@@ -44,71 +47,6 @@ pub struct PodcastFilter<'a> {
     metadata: Metadata,
     telegram_client: &'a TelegramClient,
 }
-#[derive(Debug, Clone)]
-struct EmptyUserError;
-
-#[derive(Debug, Clone)]
-struct EmptyVideoInfo;
-#[derive(Debug, Clone)]
-struct FilePathConvertingError;
-#[derive(Debug, Clone)]
-struct CommandError {
-    output: Output,
-}
-
-impl fmt::Display for CommandError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self.output)
-    }
-}
-
-impl error::Error for CommandError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
-
-impl fmt::Display for EmptyUserError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Empty user of message. Can't manage podcasts for empty user"
-        )
-    }
-}
-
-impl error::Error for EmptyUserError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
-
-impl fmt::Display for EmptyVideoInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Empty user of message. Can't manage podcasts for empty user"
-        )
-    }
-}
-
-impl error::Error for EmptyVideoInfo {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
-
-impl fmt::Display for FilePathConvertingError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Can't convert file path to string lossless")
-    }
-}
-
-impl error::Error for FilePathConvertingError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
 
 impl<'a> PodcastFilter<'a> {
     pub fn new(telegram_client: &'a TelegramClient) -> Self {
@@ -123,7 +61,7 @@ impl<'a> PodcastFilter<'a> {
             youtube_extractor,
             youtube_sdk: YoutubeSdk::new(),
             id_regex: Regex::new(r"(v=|youtu.be/)(?P<id>[^&]*)")
-                .expect("Can't compile video id Regex"),
+                .expect("Failed to compile video id Regex"),
             tmp_dir,
             s3_client: S3Storage::new(),
             metadata: Metadata::new(),
@@ -131,17 +69,17 @@ impl<'a> PodcastFilter<'a> {
         }
     }
 
-    fn process_url(
-        &self,
-        url: &str,
-        user: Option<&User>,
-    ) -> Result<String, Box<dyn std::error::Error>> {
-        let username = &user.ok_or(EmptyUserError)?.first_name;
+    fn process_url(&self, url: &str, user: Option<&User>) -> Result<String> {
+        let username = &user
+            .ok_or(anyhow!(
+                "Empty user of message. Can't manage podcasts for empty user"
+            ))?
+            .first_name;
         let video_id = self.extract_id(url)?;
         let download_path = Path::new(&self.tmp_dir)
             .join("%(id)s.%(ext)s")
             .to_str()
-            .expect("Can't convert to string file path of mp3 file")
+            .expect("Failed to convert to string file path of mp3 file")
             .to_string();
         self.download(url, &download_path)?;
         let downloaded_file_path = Path::new(&self.tmp_dir).join(format!("{}.mp3", video_id));
@@ -153,7 +91,7 @@ impl<'a> PodcastFilter<'a> {
             let metadata = fs::metadata(
                 downloaded_file_path
                     .to_str()
-                    .ok_or(FilePathConvertingError)?,
+                    .ok_or(anyhow!("Failed to lossy convert file path"))?,
             )?;
             metadata.len()
         };
@@ -177,14 +115,11 @@ impl<'a> PodcastFilter<'a> {
 
             Ok(self.s3_client.get_public_url(&rss_path(&username)))
         } else {
-            Err(EmptyVideoInfo.into())
+            Err(anyhow!("Received empty video info about {}", url))
         }
     }
 
-    fn generate_rss(
-        user: &str,
-        metadata: &VecDeque<VideoMetadata>,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    fn generate_rss(user: &str, metadata: &VecDeque<VideoMetadata>) -> Result<String> {
         let mut items = vec![];
         for item in metadata {
             let pub_date: DateTime<Utc> = item.created_at.into();
@@ -202,26 +137,42 @@ impl<'a> PodcastFilter<'a> {
         let channel = ChannelBuilder::default()
             .title(format!("Куточок {}", user))
             .items(items)
-            .build()?;
+            .build()
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to build rss channel for user {} with error {}",
+                    user,
+                    e
+                )
+            })?;
         Ok(channel.to_string())
     }
 
-    fn download(&self, url: &str, path: &str) -> BResult<Output> {
+    fn download(&self, url: &str, path: &str) -> Result<Output> {
         let res = Command::new(&self.youtube_extractor)
             .env("https_proxy", "")
             .arg("-x")
             .args(&["--audio-format", "mp3"])
             .args(&["-o", path])
             .arg(url)
-            .output()?;
+            .output()
+            .with_context(|| {
+                format!(
+                    "Failed to execute the youtube-dl command to download url {}",
+                    url
+                )
+            })?;
         if res.status.success() {
             Ok(res)
         } else {
-            Err(CommandError { output: res }.into())
+            Err(anyhow!(
+                "Exit code of youtube-dl command was not 0, output: {:?}",
+                res
+            ))
         }
     }
 
-    fn extract_id(&self, s: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn extract_id(&self, s: &str) -> Result<String> {
         self.id_regex
             .captures(s)
             .and_then(|cap| {
@@ -231,12 +182,12 @@ impl<'a> PodcastFilter<'a> {
                     None
                 }
             })
-            .ok_or("Can't parse video id from youtube url".into())
+            .ok_or(anyhow!("Can't parse video id from youtube url {}", s))
     }
 }
 
 impl<'a> Filter for PodcastFilter<'a> {
-    fn process(&self, m: &Message) -> ProcessingResult {
+    fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
             Some(s)
                 if s.starts_with("https://www.youtube.com/watch")

@@ -1,14 +1,16 @@
 use crate::{
     telegram_api::{Message, TelegramClient},
-    Filter, ProcessingResult,
+    Filter,
 };
+
+use anyhow::Result;
 
 pub struct HealthCheckFilter<'a> {
     telegram_client: &'a TelegramClient,
 }
 
 impl<'a> Filter for HealthCheckFilter<'a> {
-    fn process(&self, m: &Message) -> ProcessingResult {
+    fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
             Some(t) if t.starts_with("ping") => {
                 Ok(self.telegram_client.send_message(m.chat.id, "pong")?)
