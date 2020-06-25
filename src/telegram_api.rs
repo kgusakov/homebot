@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use bytes::Bytes;
+use reqwest::blocking::Client;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -55,12 +56,12 @@ pub struct File {
     pub file_path: String,
 }
 
-pub struct TelegramClient {
+pub struct TelegramClient<'a> {
     token: String,
-    http_client: reqwest::blocking::Client,
+    http_client: &'a Client,
 }
 
-impl TelegramClient {
+impl<'a> TelegramClient<'a> {
     const BASE_TELEGRAM_API_URL: &'static str = "https://api.telegram.org/bot";
     const BASE_FILE_TELEGRAM_API_URL: &'static str = "https://api.telegram.org/file/bot";
 
@@ -82,10 +83,10 @@ impl TelegramClient {
         )
     }
 
-    pub fn new(token_value: String) -> TelegramClient {
+    pub fn new(token_value: String, http_client: &Client) -> TelegramClient {
         TelegramClient {
             token: token_value,
-            http_client: reqwest::blocking::Client::new(),
+            http_client,
         }
     }
 
@@ -142,7 +143,7 @@ impl TelegramClient {
             .map(|_| ())?)
     }
 
-    pub fn donwload_file<'a>(&self, file_path: &str) -> Result<Bytes> {
+    pub fn donwload_file(&self, file_path: &str) -> Result<Bytes> {
         Ok(self
             .http_client
             .get(&self.file_api_url(file_path))

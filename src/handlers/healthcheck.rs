@@ -1,12 +1,12 @@
 use crate::{
     telegram_api::{Message, TelegramClient},
-    Handler,
+    Handler, HandlerContext,
 };
 
 use anyhow::Result;
 
 pub struct HealthCheckHandler<'a> {
-    telegram_client: &'a TelegramClient,
+    telegram_client: &'a TelegramClient<'a>,
 }
 
 impl<'a> Handler for HealthCheckHandler<'a> {
@@ -25,7 +25,9 @@ impl<'a> Handler for HealthCheckHandler<'a> {
 }
 
 impl<'a> HealthCheckHandler<'a> {
-    pub fn new(telegram_client: &'a TelegramClient) -> Self {
-        Self { telegram_client }
+    pub fn new(handler_context: &'a HandlerContext) -> Self {
+        Self {
+            telegram_client: handler_context.telegram_client,
+        }
     }
 }

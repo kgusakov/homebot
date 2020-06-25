@@ -2,7 +2,7 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use crate::{Handler, Message, TelegramClient, User};
+use crate::{Handler, HandlerContext, Message, TelegramClient, User};
 use s3_storage::S3Storage;
 use std::{
     collections::VecDeque,
@@ -45,11 +45,11 @@ pub struct PodcastHandler<'a> {
     tmp_dir: String,
     s3_client: S3Storage,
     metadata: Metadata,
-    telegram_client: &'a TelegramClient,
+    telegram_client: &'a TelegramClient<'a>,
 }
 
 impl<'a> PodcastHandler<'a> {
-    pub fn new(telegram_client: &'a TelegramClient) -> Self {
+    pub fn new(handler_context: &'a HandlerContext) -> Self {
         let youtube_extractor = {
             env::var("YOUTUBE_EXTRACTOR")
                 .expect("Provide YOUTUBE_EXTRACTOR environment variable please")
@@ -65,7 +65,7 @@ impl<'a> PodcastHandler<'a> {
             tmp_dir,
             s3_client: S3Storage::new(),
             metadata: Metadata::new(),
-            telegram_client,
+            telegram_client: handler_context.telegram_client,
         }
     }
 
@@ -187,7 +187,6 @@ impl<'a> PodcastHandler<'a> {
 }
 
 impl<'a> Handler for PodcastHandler<'a> {
-
     fn name(&self) -> String {
         String::from("Youtube2Rss")
     }

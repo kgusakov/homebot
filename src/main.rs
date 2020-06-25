@@ -16,6 +16,13 @@ use std::io::Read;
 use std::io::Write;
 use telegram_api::*;
 
+use reqwest::blocking::Client;
+
+pub struct HandlerContext<'a> {
+    telegram_client: &'a TelegramClient<'a>,
+    http_client: &'a Client,
+}
+
 trait Handler {
     fn name(&self) -> String;
 
@@ -25,10 +32,16 @@ trait Handler {
 fn main() {
     env_logger::init();
 
+    let http_client = Client::new();
     let telegram_client: TelegramClient = {
         let token =
             env::var("TELEGRAM_TOKEN").expect("Provide TELEGRAM_TOKEN environment variable please");
-        telegram_api::TelegramClient::new(token)
+        telegram_api::TelegramClient::new(token, &http_client)
+    };
+
+    let handler_context = HandlerContext {
+        telegram_client: &telegram_client,
+        http_client: &http_client,
     };
 
     let state_file_path =
@@ -50,9 +63,9 @@ fn main() {
     };
 
     let filters: Vec<Box<dyn Handler>> = vec![
-        Box::new(torrent::TorrentHandler::new(&telegram_client)),
-        Box::new(healthcheck::HealthCheckHandler::new(&telegram_client)),
-        Box::new(youtube2rss::PodcastHandler::new(&telegram_client)),
+        Box::new(torrent::TorrentHandler::new(&handler_context)),
+        Box::new(healthcheck::HealthCheckHandler::new(&handler_context)),
+        Box::new(youtube2rss::PodcastHandler::new(&handler_context)),
     ];
 
     loop {
@@ -85,7 +98,9 @@ where
                 Ok(_) => (),
                 Err(e) => error!(
                     "Problem while processing update {:?} by handler {} with error: {:?}",
-                    &update.message, handler.name(), e
+                    &update.message,
+                    handler.name(),
+                    e
                 ),
             }
         }

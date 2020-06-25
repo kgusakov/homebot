@@ -1,16 +1,17 @@
 use crate::telegram_api::*;
+use crate::{Handler, HandlerContext};
 use anyhow::{Context, Result};
 use base64::encode;
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 
 pub struct TorrentHandler<'a> {
-    telegram_client: &'a TelegramClient,
-    transmission_client: TransmissionClient,
+    telegram_client: &'a TelegramClient<'a>,
+    transmission_client: TransmissionClient<'a>,
 }
 
-impl<'a> crate::Handler for TorrentHandler<'a> {
-
+impl<'a> Handler for TorrentHandler<'a> {
     fn name(&self) -> String {
         String::from("TransmissionClient")
     }
@@ -44,10 +45,10 @@ impl<'a> crate::Handler for TorrentHandler<'a> {
 }
 
 impl<'a> TorrentHandler<'a> {
-    pub fn new(telegram_client: &'a TelegramClient) -> Self {
+    pub fn new(handler_context: &'a HandlerContext) -> Self {
         Self {
-            telegram_client,
-            transmission_client: TransmissionClient::new(),
+            telegram_client: handler_context.telegram_client,
+            transmission_client: TransmissionClient::new(handler_context.http_client),
         }
     }
 
@@ -60,9 +61,9 @@ impl<'a> TorrentHandler<'a> {
     }
 }
 
-struct TransmissionClient {
+struct TransmissionClient<'a> {
     transmission_address: String,
-    http_client: reqwest::blocking::Client,
+    http_client: &'a Client,
 }
 
 #[derive(Serialize, Debug)]
@@ -96,15 +97,15 @@ enum ResponseArguments {
     TorerntAdded { id: i32, name: String },
 }
 
-impl TransmissionClient {
-    fn new() -> Self {
+impl<'a> TransmissionClient<'a> {
+    fn new(http_client: &'a Client) -> Self {
         let transmission_address = {
             env::var("TRANSMISSION_ADDRESS")
                 .expect("Provide TRANSMISSION_ADDRESS environment variable please")
         };
         Self {
             transmission_address: transmission_address,
-            http_client: reqwest::blocking::Client::new(),
+            http_client: http_client,
         }
     }
 
