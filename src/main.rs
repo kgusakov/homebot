@@ -65,7 +65,7 @@ fn main() {
                 save_update_id(&state_file_path, update_id);
             }
             Err(e) => error!(
-                "Error while getting updates with offset {} error: {}",
+                "Error while getting updates with offset {} error: {:?}",
                 update_id, e
             ),
         }
@@ -81,7 +81,7 @@ where
             match handler.process(&update.message) {
                 Ok(_) => (),
                 Err(e) => error!(
-                    "Problem while processing update {:?} error: {}",
+                    "Problem while processing update {:?} error: {:?}",
                     &update.message, e
                 ),
             }
