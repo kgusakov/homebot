@@ -6,32 +6,30 @@ use std::io::Read;
 use std::path::Path;
 
 pub struct S3Storage {
-    s3_client: S3Client,
     bucket_name: String,
 }
 
 impl S3Storage {
+    fn s3_client(&self) -> S3Client {
+        let region = rusoto_core::region::Region::Custom {
+            name: "ru-central1".to_owned(),
+            endpoint: "storage.yandexcloud.net".to_owned(),
+        };
+
+        rusoto_s3::S3Client::new(region)
+    }
+
     pub fn new() -> Self {
         let bucket_name = {
             env::var("BOT_BUCKET_NAME")
                 .expect("Provide BOT_BUCKET_NAME environment variable please")
         };
-        Self {
-            s3_client: {
-                let region = rusoto_core::region::Region::Custom {
-                    name: "ru-central1".to_owned(),
-                    endpoint: "storage.yandexcloud.net".to_owned(),
-                };
-
-                rusoto_s3::S3Client::new(region)
-            },
-            bucket_name,
-        }
+        Self { bucket_name }
     }
 
     pub fn download_object(&self, s3_path: &str) -> Result<Vec<u8>> {
         let response = self
-            .s3_client
+            .s3_client()
             .get_object(GetObjectRequest {
                 bucket: self.bucket_name.to_owned(),
                 key: s3_path.to_string(),
@@ -63,7 +61,7 @@ impl S3Storage {
 
     pub fn upload_object(&self, data: Vec<u8>, s3_path: &str) -> anyhow::Result<()> {
         Ok(self
-            .s3_client
+            .s3_client()
             .put_object(PutObjectRequest {
                 bucket: self.bucket_name.to_owned(),
                 key: s3_path.to_string(),
@@ -92,7 +90,7 @@ impl S3Storage {
                 )
             })?;
         Ok(self
-            .s3_client
+            .s3_client()
             .put_object(PutObjectRequest {
                 bucket: self.bucket_name.to_owned(),
                 key: s3_path.to_string(),

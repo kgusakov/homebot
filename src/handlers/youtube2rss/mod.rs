@@ -200,7 +200,10 @@ impl<'a> Handler for PodcastHandler<'a> {
                 let rss_feed_url = self.process_url(s, m.from.as_ref())?;
                 Ok(self.telegram_client.send_message(SendMessage {
                     chat_id: m.chat.id.to_string(),
-                    text: format!("RSS фид успешно обновлен и доступен по адресу: {}", rss_feed_url),
+                    text: format!(
+                        "RSS фид успешно обновлен и доступен по адресу: {}",
+                        rss_feed_url
+                    ),
                     reply_to_message_id: Some(&m.message_id),
                 })?)
             }
