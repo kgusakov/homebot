@@ -2,7 +2,7 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use crate::{Handler, HandlerContext, Message, TelegramClient, User};
+use crate::{Handler, HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
 use std::{
     collections::VecDeque,
@@ -198,7 +198,11 @@ impl<'a> Handler for PodcastHandler<'a> {
                     || s.starts_with("https://youtu.be/") =>
             {
                 let rss_feed_url = self.process_url(s, m.from.as_ref())?;
-                Ok(self.telegram_client.send_message(m.chat.id, rss_feed_url)?)
+                Ok(self.telegram_client.send_message(SendMessage {
+                    chat_id: m.chat.id.to_string(),
+                    text: rss_feed_url,
+                    reply_to_message_id: Some(&m.message_id),
+                })?)
             }
             _ => Ok(()),
         }

@@ -114,13 +114,15 @@ fn process_updates<'a, T: ?Sized>(
 }
 
 fn send_error_message(update: &Update, handler_name: &str, telegram_client: &TelegramClient) {
-    let result = telegram_client.send_message(
-        update.message.chat.id,
-        format!(
+    let message = SendMessage {
+        chat_id: update.message.chat.id.to_string(),
+        text: format!(
             "что-то пошло не так во время обработки сообщения модулем {}",
             handler_name
         ),
-    );
+        reply_to_message_id: Some(&update.message.message_id),
+    };
+    let result = telegram_client.send_message(message);
     match result {
         Err(e) => error!(
             "Problem while trying to send error message for update id {} and handler {} error: {:?}",

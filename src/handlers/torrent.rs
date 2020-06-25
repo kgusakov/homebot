@@ -21,15 +21,19 @@ impl<'a> Handler for TorrentHandler<'a> {
             Response {
                 arguments: ResponseArguments::TorerntAdded { name: n, .. },
                 ..
-            } => self
-                .telegram_client
-                .send_message(message.chat.id, format!("{} успешно добавлен", n)),
+            } => self.telegram_client.send_message(SendMessage {
+                chat_id: message.chat.id.to_string(),
+                text: format!("{} успешно добавлен", n),
+                reply_to_message_id: Some(&message.message_id),
+            }),
             Response {
                 arguments: ResponseArguments::TorerntDuplicate { name: n, .. },
                 ..
-            } => self
-                .telegram_client
-                .send_message(message.chat.id, format!("{} уже был добавлен ранее", n)),
+            } => self.telegram_client.send_message(SendMessage {
+                chat_id: message.chat.id.to_string(),
+                text: format!("{} уже был добавлен ранее", n),
+                reply_to_message_id: Some(&message.message_id),
+            }),
         };
 
         match message {

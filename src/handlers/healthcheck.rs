@@ -1,5 +1,5 @@
 use crate::{
-    telegram_api::{Message, TelegramClient},
+    telegram_api::{Message, SendMessage, TelegramClient},
     Handler, HandlerContext,
 };
 
@@ -16,9 +16,13 @@ impl<'a> Handler for HealthCheckHandler<'a> {
 
     fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
-            Some(t) if t.starts_with("ping") => Ok(self
-                .telegram_client
-                .send_message(m.chat.id, String::from("pong"))?),
+            Some(t) if t.starts_with("ping") => {
+                Ok(self.telegram_client.send_message(SendMessage {
+                    chat_id: m.chat.id.to_string(),
+                    text: String::from("pong"),
+                    reply_to_message_id: Some(&m.message_id),
+                })?)
+            }
             _ => Ok(()),
         }
     }

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use reqwest::blocking::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct TelegramResponse<T> {
@@ -17,6 +17,7 @@ pub struct Update {
 
 #[derive(Debug, Deserialize)]
 pub struct Message {
+    pub message_id: i64,
     #[serde(default)]
     pub from: Option<User>,
     #[serde(default)]
@@ -54,6 +55,12 @@ pub struct File {
     pub file_unique_id: String,
     pub file_size: Option<i32>,
     pub file_path: String,
+}
+#[derive(Debug, Serialize)]
+pub struct SendMessage<'a> {
+    pub chat_id: String,
+    pub text: String,
+    pub reply_to_message_id: Option<&'a i64>,
 }
 
 pub struct TelegramClient<'a> {
@@ -118,14 +125,11 @@ impl<'a> TelegramClient<'a> {
             })
     }
 
-    pub fn send_message(&self, chat_id: i64, text: String) -> Result<()> {
-        let mut body = std::collections::HashMap::<&str, String>::new();
-        body.insert("chat_id", chat_id.to_string());
-        body.insert("text", text.to_string());
-        let json_body = serde_json::to_string(&body).with_context(|| {
+    pub fn send_message(&self, message: SendMessage) -> Result<()> {
+        let json_body = serde_json::to_string(&message).with_context(|| {
             format!(
                 "Failed to serialize body to json for sending message {:?}",
-                body
+                message
             )
         });
         Ok(self
@@ -134,12 +138,7 @@ impl<'a> TelegramClient<'a> {
             .body(json_body?)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .send()
-            .with_context(|| {
-                format!(
-                    "Failed to send the message for chat id {} with text {}",
-                    chat_id, text
-                )
-            })
+            .with_context(|| format!("Failed to send the message {:?}", message))
             .map(|_| ())?)
     }
 
