@@ -16,9 +16,9 @@ impl<'a> Handler for HealthCheckHandler<'a> {
 
     fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
-            Some(t) if t.starts_with("ping") => {
-                Ok(self.telegram_client.send_message(m.chat.id, "pong")?)
-            }
+            Some(t) if t.starts_with("ping") => Ok(self
+                .telegram_client
+                .send_message(m.chat.id, String::from("pong"))?),
             _ => Ok(()),
         }
     }

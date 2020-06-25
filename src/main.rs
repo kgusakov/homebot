@@ -71,7 +71,7 @@ fn main() {
     loop {
         match telegram_client.get_updates(update_id + 1) {
             Ok(r) => {
-                process_updates(&r.result, &filters);
+                process_updates(&r.result, &filters, &telegram_client);
                 update_id = r
                     .result
                     .iter()
@@ -88,22 +88,45 @@ fn main() {
     }
 }
 
-fn process_updates<'a, T: ?Sized>(updates: &Vec<Update>, handlers: &Vec<Box<T>>)
-where
+fn process_updates<'a, T: ?Sized>(
+    updates: &Vec<Update>,
+    handlers: &Vec<Box<T>>,
+    telegram_client: &TelegramClient,
+) where
     T: Handler,
 {
     for update in updates.iter() {
         for handler in handlers.iter() {
             match handler.process(&update.message) {
                 Ok(_) => (),
-                Err(e) => error!(
-                    "Problem while processing update {:?} by handler {} with error: {:?}",
-                    &update.message,
-                    handler.name(),
-                    e
-                ),
+                Err(e) => {
+                    error!(
+                        "Problem while processing update {:?} by handler {} with error: {:?}",
+                        &update.message,
+                        handler.name(),
+                        e
+                    );
+                    send_error_message(update, &handler.name(), telegram_client);
+                }
             }
         }
+    }
+}
+
+fn send_error_message(update: &Update, handler_name: &str, telegram_client: &TelegramClient) {
+    let result = telegram_client.send_message(
+        update.message.chat.id,
+        format!(
+            "что-то пошло не так во время обработки сообщения модулем {}",
+            handler_name
+        ),
+    );
+    match result {
+        Err(e) => error!(
+            "Problem while trying to send error message for update id {} and handler {} error: {:?}",
+            update.update_id, handler_name, e
+        ),
+        _ => (),
     }
 }
 

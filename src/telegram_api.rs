@@ -118,7 +118,7 @@ impl<'a> TelegramClient<'a> {
             })
     }
 
-    pub fn send_message(&self, chat_id: i64, text: &str) -> Result<()> {
+    pub fn send_message(&self, chat_id: i64, text: String) -> Result<()> {
         let mut body = std::collections::HashMap::<&str, String>::new();
         body.insert("chat_id", chat_id.to_string());
         body.insert("text", text.to_string());

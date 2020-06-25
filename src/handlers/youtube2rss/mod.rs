@@ -198,9 +198,7 @@ impl<'a> Handler for PodcastHandler<'a> {
                     || s.starts_with("https://youtu.be/") =>
             {
                 let rss_feed_url = self.process_url(s, m.from.as_ref())?;
-                Ok(self
-                    .telegram_client
-                    .send_message(m.chat.id, &rss_feed_url)?)
+                Ok(self.telegram_client.send_message(m.chat.id, rss_feed_url)?)
             }
             _ => Ok(()),
         }

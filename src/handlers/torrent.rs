@@ -23,13 +23,13 @@ impl<'a> Handler for TorrentHandler<'a> {
                 ..
             } => self
                 .telegram_client
-                .send_message(message.chat.id, &format!("{} успешно добавлен", n)),
+                .send_message(message.chat.id, format!("{} успешно добавлен", n)),
             Response {
                 arguments: ResponseArguments::TorerntDuplicate { name: n, .. },
                 ..
             } => self
                 .telegram_client
-                .send_message(message.chat.id, &format!("{} уже был добавлен ранее", n)),
+                .send_message(message.chat.id, format!("{} уже был добавлен ранее", n)),
         };
 
         match message {
