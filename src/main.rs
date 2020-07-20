@@ -7,6 +7,7 @@ mod telegram_api;
 use handlers::healthcheck;
 use handlers::torrent;
 use handlers::youtube2rss;
+use handlers::init_sync_handlers_loop;
 
 use anyhow::Result;
 
@@ -15,6 +16,8 @@ use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
 use telegram_api::*;
+
+use lazy_static::lazy_static;
 
 use reqwest::blocking::Client;
 
@@ -29,19 +32,23 @@ trait Handler {
     fn process(&self, m: &Message) -> Result<()>;
 }
 
+lazy_static! {
+    static ref HTTP_CLIENT: Client = Client::new();
+    
+    static ref TELEGRAM_CLIENT: TelegramClient<'static> =  {
+        let token =
+            env::var("TELEGRAM_TOKEN").expect("Provide TELEGRAM_TOKEN environment variable please");
+        telegram_api::TelegramClient::new(token, &HTTP_CLIENT)
+    };
+
+}
+
 fn main() {
     env_logger::init();
 
-    let http_client = Client::new();
-    let telegram_client: TelegramClient = {
-        let token =
-            env::var("TELEGRAM_TOKEN").expect("Provide TELEGRAM_TOKEN environment variable please");
-        telegram_api::TelegramClient::new(token, &http_client)
-    };
-
     let handler_context = HandlerContext {
-        telegram_client: &telegram_client,
-        http_client: &http_client,
+        telegram_client: &TELEGRAM_CLIENT,
+        http_client: &HTTP_CLIENT,
     };
 
     let state_file_path =
@@ -62,16 +69,14 @@ fn main() {
             .expect("Bot state is corrupted")
     };
 
-    let filters: Vec<Box<dyn Handler>> = vec![
-        Box::new(torrent::TorrentHandler::new(&handler_context)),
-        Box::new(healthcheck::HealthCheckHandler::new(&handler_context)),
-        Box::new(youtube2rss::PodcastHandler::new(&handler_context)),
-    ];
+    let tx = init_sync_handlers_loop(handler_context);
 
     loop {
-        match telegram_client.get_updates(update_id + 1) {
+        match TELEGRAM_CLIENT.get_updates(update_id + 1) {
             Ok(r) => {
-                process_updates(&r.result, &filters, &telegram_client);
+                for update in r.clone().result {
+                    tx.send(update).expect("Channel for sync handlers is broken");
+                }
                 update_id = r
                     .result
                     .iter()
@@ -85,50 +90,6 @@ fn main() {
                 update_id, e
             ),
         }
-    }
-}
-
-fn process_updates<'a, T: ?Sized>(
-    updates: &Vec<Update>,
-    handlers: &Vec<Box<T>>,
-    telegram_client: &TelegramClient,
-) where
-    T: Handler,
-{
-    for update in updates.iter() {
-        for handler in handlers.iter() {
-            match handler.process(&update.message) {
-                Ok(_) => (),
-                Err(e) => {
-                    error!(
-                        "Problem while processing update {:?} by handler {} with error: {:?}",
-                        &update.message,
-                        handler.name(),
-                        e
-                    );
-                    send_error_message(update, &handler.name(), telegram_client);
-                }
-            }
-        }
-    }
-}
-
-fn send_error_message(update: &Update, handler_name: &str, telegram_client: &TelegramClient) {
-    let message = SendMessage {
-        chat_id: update.message.chat.id.to_string(),
-        text: format!(
-            "что-то пошло не так во время обработки сообщения модулем {}",
-            handler_name
-        ),
-        reply_to_message_id: Some(&update.message.message_id),
-    };
-    let result = telegram_client.send_message(message);
-    match result {
-        Err(e) => error!(
-            "Problem while trying to send error message for update id {} and handler {} error: {:?}",
-            update.update_id, handler_name, e
-        ),
-        _ => (),
     }
 }
 

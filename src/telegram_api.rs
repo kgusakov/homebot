@@ -2,20 +2,21 @@ use anyhow::{Context, Result};
 use bytes::Bytes;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
+// use std::marker::Copy;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct TelegramResponse<T> {
     pub ok: bool,
     pub result: T,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Update {
     pub update_id: i32,
     pub message: Message,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Message {
     pub message_id: i64,
     #[serde(default)]
@@ -27,19 +28,19 @@ pub struct Message {
     pub chat: Chat,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Chat {
     pub id: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Document {
     pub file_id: String,
     pub file_name: String,
     pub mime_type: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct User {
     pub id: i32,
     pub is_bot: bool,
@@ -49,7 +50,7 @@ pub struct User {
     #[serde(default)]
     pub username: Option<String>,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct File {
     pub file_id: String,
     pub file_unique_id: String,

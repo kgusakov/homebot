@@ -34,3 +34,5 @@ rss = "1.9.0"
 anyhow = "1.0.31"
 
 chrono = "0.4.11"
+
+lazy_static = "1.4.0"
