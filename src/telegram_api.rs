@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
 use bytes::Bytes;
-use reqwest::blocking::Client;
+use reqwest::{blocking, Client};
 use serde::{Deserialize, Serialize};
-// use std::marker::Copy;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct TelegramResponse<T> {
@@ -66,7 +65,8 @@ pub struct SendMessage<'a> {
 
 pub struct TelegramClient<'a> {
     token: String,
-    http_client: &'a Client,
+    http_client: &'a blocking::Client,
+    async_http_client: &'a Client,
 }
 
 impl<'a> TelegramClient<'a> {
@@ -91,10 +91,15 @@ impl<'a> TelegramClient<'a> {
         )
     }
 
-    pub fn new(token_value: String, http_client: &Client) -> TelegramClient {
+    pub fn new(
+        token_value: String,
+        http_client: &'a blocking::Client,
+        async_http_client: &'a Client,
+    ) -> TelegramClient<'a> {
         TelegramClient {
             token: token_value,
             http_client,
+            async_http_client,
         }
     }
 
@@ -124,6 +129,24 @@ impl<'a> TelegramClient<'a> {
                     file_id
                 )
             })
+    }
+
+    pub async fn async_send_message(&self, message: SendMessage<'_>) -> Result<()> {
+        let json_body = serde_json::to_string(&message).with_context(|| {
+            format!(
+                "Failed to serialize body to json for sending message {:?}",
+                message
+            )
+        });
+        Ok(self
+            .async_http_client
+            .post(&self.api_url("sendMessage"))
+            .body(json_body?)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .send()
+            .await
+            .with_context(|| format!("Failed to send the message {:?}", message))
+            .map(|_| ())?)
     }
 
     pub fn send_message(&self, message: SendMessage) -> Result<()> {

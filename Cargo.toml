@@ -36,3 +36,5 @@ anyhow = "1.0.31"
 chrono = "0.4.11"
 
 lazy_static = "1.4.0"
+
+async-trait = "0.1.36"

@@ -2,7 +2,8 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use crate::{Handler, HandlerContext, Message, SendMessage, TelegramClient, User};
+use super::Handler;
+use crate::{HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
 use std::{
     collections::VecDeque,

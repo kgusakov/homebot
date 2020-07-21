@@ -1,5 +1,6 @@
+use super::Handler;
 use crate::telegram_api::*;
-use crate::{Handler, HandlerContext};
+use crate::HandlerContext;
 use anyhow::{Context, Result};
 use base64::encode;
 use reqwest::blocking::Client;
