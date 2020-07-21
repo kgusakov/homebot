@@ -8,11 +8,11 @@ use crate::HANDLER_CONTEXT;
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
-use std::sync::mpsc::{channel, sync_channel, Sender, SyncSender};
+use std::sync::mpsc::{channel, Sender};
 use std::thread::spawn;
 use tokio;
-use tokio::runtime;
-use tokio::prelude::*;
+
+
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
 trait Handler {
@@ -94,8 +94,7 @@ pub fn init_async_handlers_loop() -> UnboundedSender<Update> {
     tx
 }
 
-fn store_update(handler_name: &str, update: &Update) {}
-fn ack_update(handler_name: &str, update_id: &i32) {}
+fn ack_update(_handler_name: &str, _update_id: &i32) {}
 
 fn send_error_message(update: &Update, handler_name: &str, telegram_client: &TelegramClient) {
     let message = SendMessage {
