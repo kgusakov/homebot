@@ -12,7 +12,6 @@ use std::sync::mpsc::{channel, Sender};
 use std::thread::spawn;
 use tokio;
 
-
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
 trait Handler {
@@ -29,13 +28,12 @@ trait AsyncHandler {
 }
 
 lazy_static! {
-    static ref SYNC_HANDLERS: Vec<Box<dyn Handler + Sync + Send>> = vec![
+    static ref SYNC_HANDLERS: Vec<Box<dyn Handler + Sync + Send>> =
+        vec![Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)),];
+    static ref ASYNC_HANDLERS: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![
+        Box::new(healthcheck::HealthCheckHandler::new(&HANDLER_CONTEXT)),
         Box::new(torrent::TorrentHandler::new(&HANDLER_CONTEXT)),
-        Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)),
     ];
-    static ref ASYNC_HANDLERS: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![Box::new(
-        healthcheck::HealthCheckHandler::new(&HANDLER_CONTEXT)
-    )];
 }
 
 pub fn init_sync_handlers_loop() -> Sender<Update> {
@@ -76,11 +74,10 @@ pub fn init_async_handlers_loop() -> UnboundedSender<Update> {
                                         handler.name(),
                                         e
                                     );
-                                send_error_message(
+                                async_send_error_message(
                                     &u,
-                                    &handler.name(),
-                                    HANDLER_CONTEXT.telegram_client,
-                                );
+                                    &handler.name()
+                                ).await;
                             }
                             ack_update(&handler.name(), &u.update_id);
                         });
@@ -106,6 +103,25 @@ fn send_error_message(update: &Update, handler_name: &str, telegram_client: &Tel
         reply_to_message_id: Some(&update.message.message_id),
     };
     let result = telegram_client.send_message(message);
+    match result {
+        Err(e) => error!(
+            "Problem while trying to send error message for update id {} and handler {} error: {:?}",
+            update.update_id, handler_name, e
+        ),
+        _ => (),
+    }
+}
+
+async fn async_send_error_message(update: &Update, handler_name: &str) {
+    let message = SendMessage {
+        chat_id: update.message.chat.id.to_string(),
+        text: format!(
+            "что-то пошло не так во время обработки сообщения модулем {}",
+            handler_name
+        ),
+        reply_to_message_id: Some(&update.message.message_id),
+    };
+    let result = crate::TELEGRAM_CLIENT.async_send_message(message).await;
     match result {
         Err(e) => error!(
             "Problem while trying to send error message for update id {} and handler {} error: {:?}",

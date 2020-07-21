@@ -117,6 +117,22 @@ impl<'a> TelegramClient<'a> {
             })
     }
 
+    pub async fn async_get_file(&self, file_id: &str) -> Result<TelegramResponse<File>> {
+        self.async_http_client
+            .get(&self.api_url(&format!("getFile?file_id={}", file_id)))
+            .send()
+            .await
+            .with_context(|| format!("Failed to get file with id {}", file_id))?
+            .json()
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to parse response for getting file with id {}",
+                    file_id
+                )
+            })
+    }
+
     pub fn get_file(&self, file_id: &str) -> Result<TelegramResponse<File>> {
         self.http_client
             .get(&self.api_url(&format!("getFile?file_id={}", file_id)))
@@ -164,6 +180,28 @@ impl<'a> TelegramClient<'a> {
             .send()
             .with_context(|| format!("Failed to send the message {:?}", message))
             .map(|_| ())?)
+    }
+
+    pub async fn async_donwload_file(&self, file_path: &str) -> Result<Bytes> {
+        Ok(self
+            .async_http_client
+            .get(&self.file_api_url(file_path))
+            .send()
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to send telegram api request for file download with path {}",
+                    file_path
+                )
+            })?
+            .bytes()
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to get bytes for file download request with path {}",
+                    file_path
+                )
+            })?)
     }
 
     pub fn donwload_file(&self, file_path: &str) -> Result<Bytes> {

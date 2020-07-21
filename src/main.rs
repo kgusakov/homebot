@@ -17,7 +17,6 @@ use reqwest::{blocking, Client};
 
 pub struct HandlerContext<'a> {
     telegram_client: &'a TelegramClient<'a>,
-    http_client: &'a blocking::Client,
     async_http_client: &'a Client,
 }
 
@@ -31,10 +30,8 @@ lazy_static! {
     };
     static ref HANDLER_CONTEXT: HandlerContext<'static> = HandlerContext {
         telegram_client: &TELEGRAM_CLIENT,
-        http_client: &HTTP_CLIENT,
         async_http_client: &ASYNC_HTTP_CLIENT,
     };
-
     static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
