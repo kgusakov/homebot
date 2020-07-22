@@ -79,7 +79,6 @@ impl<'a> PodcastHandler<'a> {
     }
 
     async fn process_url(&self, url: &str, user: Option<&User>, message_id: i64) -> Result<String> {
-        println!("Received url");
         let username = &user
             .ok_or(anyhow!(
                 "Empty user of message. Can't manage podcasts for empty user"
@@ -92,7 +91,7 @@ impl<'a> PodcastHandler<'a> {
             .expect("Failed to convert to string file path of mp3 file")
             .to_string();
         self.download(url, &download_path).await?;
-        println!("Download finished");
+
         let downloaded_file_path =
             Path::new(&self.tmp_dir).join(format!("{}{}.mp3", message_id, video_id));
         let s3_result_file_path = format!("{}/{}.mp3", data_path(&username), &video_id);
@@ -118,7 +117,7 @@ impl<'a> PodcastHandler<'a> {
                 original_link: url.to_string(),
             };
 
-            println!("Start metadata upload");
+
             let metadata = {
                 let _mutex_guard = self.metadata_load_upload_transaction_mutex.lock();
                 let mut m = self.metadata.load_metadata(&metadata_path(&username)).await?;
@@ -169,7 +168,6 @@ impl<'a> PodcastHandler<'a> {
     }
 
     async fn download(&self, url: &str, path: &str) -> Result<Output> {
-        println!("Download started");
         let res = Command::new(&self.youtube_extractor)
             .env("https_proxy", "")
             .arg("-x")
