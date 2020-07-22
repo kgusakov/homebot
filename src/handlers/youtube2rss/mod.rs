@@ -5,13 +5,7 @@ mod youtube_sdk;
 use super::AsyncHandler;
 use crate::{HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
-use std::{
-    collections::VecDeque,
-    env, fs,
-    path::Path,
-    process::Output,
-    time::SystemTime,
-};
+use std::{collections::VecDeque, env, fs, path::Path, process::Output, time::SystemTime};
 use youtube_sdk::YoutubeSdk;
 
 use metadata::*;
@@ -53,7 +47,7 @@ pub struct PodcastHandler<'a> {
     s3_client: S3Storage,
     metadata: Metadata,
     telegram_client: &'a TelegramClient<'a>,
-    metadata_load_upload_transaction_mutex: Mutex<bool>
+    metadata_load_upload_transaction_mutex: Mutex<bool>,
 }
 
 impl<'a> PodcastHandler<'a> {
@@ -74,7 +68,7 @@ impl<'a> PodcastHandler<'a> {
             s3_client: S3Storage::new(),
             metadata: Metadata::new(),
             telegram_client: handler_context.telegram_client,
-            metadata_load_upload_transaction_mutex: Mutex::new(false)
+            metadata_load_upload_transaction_mutex: Mutex::new(false),
         }
     }
 
@@ -96,7 +90,10 @@ impl<'a> PodcastHandler<'a> {
             Path::new(&self.tmp_dir).join(format!("{}{}.mp3", message_id, video_id));
         let s3_result_file_path = format!("{}/{}.mp3", data_path(&username), &video_id);
         self.s3_client
-            .upload_file(downloaded_file_path.to_path_buf(), s3_result_file_path.to_string())
+            .upload_file(
+                downloaded_file_path.to_path_buf(),
+                s3_result_file_path.to_string(),
+            )
             .await?;
 
         let file_size = {
@@ -117,13 +114,16 @@ impl<'a> PodcastHandler<'a> {
                 original_link: url.to_string(),
             };
 
-
             let metadata = {
                 let _mutex_guard = self.metadata_load_upload_transaction_mutex.lock();
-                let mut m = self.metadata.load_metadata(&metadata_path(&username)).await?;
+                let mut m = self
+                    .metadata
+                    .load_metadata(&metadata_path(&username))
+                    .await?;
                 m.push_front(video_metadata);
                 self.metadata
-                    .update_metadata(&metadata_path(&username), &m).await?;
+                    .update_metadata(&metadata_path(&username), &m)
+                    .await?;
                 m
             };
 
@@ -219,14 +219,17 @@ impl<'a> AsyncHandler for PodcastHandler<'a> {
                     || s.starts_with("https://youtu.be/") =>
             {
                 let rss_feed_url = self.process_url(s, m.from.as_ref(), m.message_id).await?;
-                Ok(self.telegram_client.async_send_message(SendMessage {
-                    chat_id: m.chat.id.to_string(),
-                    text: format!(
-                        "RSS фид успешно обновлен и доступен по адресу: {}",
-                        rss_feed_url
-                    ),
-                    reply_to_message_id: Some(&m.message_id),
-                }).await?)
+                Ok(self
+                    .telegram_client
+                    .async_send_message(SendMessage {
+                        chat_id: m.chat.id.to_string(),
+                        text: format!(
+                            "RSS фид успешно обновлен и доступен по адресу: {}",
+                            rss_feed_url
+                        ),
+                        reply_to_message_id: Some(&m.message_id),
+                    })
+                    .await?)
             }
             _ => Ok(()),
         }

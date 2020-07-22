@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use rusoto_s3::{GetObjectRequest, PutObjectRequest, S3Client, S3};
 use std::env;
+use std::io::Read;
 use std::path::PathBuf;
 use tokio::prelude::*;
-use std::io::Read;
 
 pub struct S3Storage {
     bucket_name: String,
@@ -79,18 +79,17 @@ impl S3Storage {
             let f_p = file.clone();
             let s3_p = s3_path.clone();
             tokio::task::spawn_blocking(move || {
-                let mut f = std::fs::File::open(f_p)
-                    .with_context(|| {
-                        format!(
-                            "Failed to open file during file upload to the path {}",
-                            s3_p
-                        )
-                    })?;
+                let mut f = std::fs::File::open(f_p).with_context(|| {
+                    format!(
+                        "Failed to open file during file upload to the path {}",
+                        s3_p
+                    )
+                })?;
                 let mut body: Vec<u8> = vec![];
                 f.read_to_end(&mut body)?;
                 Ok::<Vec<u8>, anyhow::Error>(body)
-                
-            }).await?
+            })
+            .await?
         }?;
 
         Ok(self
