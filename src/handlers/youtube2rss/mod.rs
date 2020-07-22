@@ -70,7 +70,7 @@ impl<'a> PodcastHandler<'a> {
         }
     }
 
-    fn process_url(&self, url: &str, user: Option<&User>) -> Result<String> {
+    fn process_url(&self, url: &str, user: Option<&User>, message_id: i64) -> Result<String> {
         let username = &user
             .ok_or(anyhow!(
                 "Empty user of message. Can't manage podcasts for empty user"
@@ -78,12 +78,12 @@ impl<'a> PodcastHandler<'a> {
             .first_name;
         let video_id = self.extract_id(url)?;
         let download_path = Path::new(&self.tmp_dir)
-            .join("%(id)s.%(ext)s")
+            .join(format!("{}{}", message_id, "%(id)s.%(ext)s"))
             .to_str()
             .expect("Failed to convert to string file path of mp3 file")
             .to_string();
         self.download(url, &download_path)?;
-        let downloaded_file_path = Path::new(&self.tmp_dir).join(format!("{}.mp3", video_id));
+        let downloaded_file_path = Path::new(&self.tmp_dir).join(format!("{}{}.mp3", message_id, video_id));
         let s3_result_file_path = format!("{}/{}.mp3", data_path(&username), &video_id);
         self.s3_client
             .upload_file(&downloaded_file_path, &s3_result_file_path)?;
@@ -198,7 +198,7 @@ impl<'a> Handler for PodcastHandler<'a> {
                 if s.starts_with("https://www.youtube.com/watch")
                     || s.starts_with("https://youtu.be/") =>
             {
-                let rss_feed_url = self.process_url(s, m.from.as_ref())?;
+                let rss_feed_url = self.process_url(s, m.from.as_ref(), m.message_id)?;
                 Ok(self.telegram_client.send_message(SendMessage {
                     chat_id: m.chat.id.to_string(),
                     text: format!(
