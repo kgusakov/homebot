@@ -133,20 +133,6 @@ impl<'a> TelegramClient<'a> {
             })
     }
 
-    pub fn get_file(&self, file_id: &str) -> Result<TelegramResponse<File>> {
-        self.http_client
-            .get(&self.api_url(&format!("getFile?file_id={}", file_id)))
-            .send()
-            .with_context(|| format!("Failed to get file with id {}", file_id))?
-            .json()
-            .with_context(|| {
-                format!(
-                    "Failed to parse response for getting file with id {}",
-                    file_id
-                )
-            })
-    }
-
     pub async fn async_send_message(&self, message: SendMessage<'_>) -> Result<()> {
         let json_body = serde_json::to_string(&message).with_context(|| {
             format!(
@@ -196,26 +182,6 @@ impl<'a> TelegramClient<'a> {
             })?
             .bytes()
             .await
-            .with_context(|| {
-                format!(
-                    "Failed to get bytes for file download request with path {}",
-                    file_path
-                )
-            })?)
-    }
-
-    pub fn donwload_file(&self, file_path: &str) -> Result<Bytes> {
-        Ok(self
-            .http_client
-            .get(&self.file_api_url(file_path))
-            .send()
-            .with_context(|| {
-                format!(
-                    "Failed to send telegram api request for file download with path {}",
-                    file_path
-                )
-            })?
-            .bytes()
             .with_context(|| {
                 format!(
                     "Failed to get bytes for file download request with path {}",
