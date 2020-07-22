@@ -28,11 +28,11 @@ trait AsyncHandler {
 }
 
 lazy_static! {
-    static ref SYNC_HANDLERS: Vec<Box<dyn Handler + Sync + Send>> =
-        vec![Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)),];
+    static ref SYNC_HANDLERS: Vec<Box<dyn Handler + Sync + Send>> = vec![];
     static ref ASYNC_HANDLERS: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![
         Box::new(healthcheck::HealthCheckHandler::new(&HANDLER_CONTEXT)),
         Box::new(torrent::TorrentHandler::new(&HANDLER_CONTEXT)),
+        Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)),
     ];
 }
 

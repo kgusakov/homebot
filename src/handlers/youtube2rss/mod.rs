@@ -2,14 +2,14 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use super::Handler;
+use super::AsyncHandler;
 use crate::{HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
 use std::{
     collections::VecDeque,
     env, fs,
     path::Path,
-    process::{Command, Output},
+    process::Output,
     time::SystemTime,
 };
 use youtube_sdk::YoutubeSdk;
@@ -26,6 +26,12 @@ use chrono::DateTime;
 
 use anyhow::anyhow;
 use anyhow::{Context, Result};
+
+use async_trait::async_trait;
+
+use futures::lock::Mutex;
+
+use tokio::process::Command;
 
 fn metadata_path(user: &str) -> String {
     format!("{}/metadata.mp", user)
@@ -47,6 +53,7 @@ pub struct PodcastHandler<'a> {
     s3_client: S3Storage,
     metadata: Metadata,
     telegram_client: &'a TelegramClient<'a>,
+    metadata_load_upload_transaction_mutex: Mutex<bool>
 }
 
 impl<'a> PodcastHandler<'a> {
@@ -67,10 +74,12 @@ impl<'a> PodcastHandler<'a> {
             s3_client: S3Storage::new(),
             metadata: Metadata::new(),
             telegram_client: handler_context.telegram_client,
+            metadata_load_upload_transaction_mutex: Mutex::new(false)
         }
     }
 
-    fn process_url(&self, url: &str, user: Option<&User>, message_id: i64) -> Result<String> {
+    async fn process_url(&self, url: &str, user: Option<&User>, message_id: i64) -> Result<String> {
+        println!("Received url");
         let username = &user
             .ok_or(anyhow!(
                 "Empty user of message. Can't manage podcasts for empty user"
@@ -82,11 +91,14 @@ impl<'a> PodcastHandler<'a> {
             .to_str()
             .expect("Failed to convert to string file path of mp3 file")
             .to_string();
-        self.download(url, &download_path)?;
-        let downloaded_file_path = Path::new(&self.tmp_dir).join(format!("{}{}.mp3", message_id, video_id));
+        self.download(url, &download_path).await?;
+        println!("Download finished");
+        let downloaded_file_path =
+            Path::new(&self.tmp_dir).join(format!("{}{}.mp3", message_id, video_id));
         let s3_result_file_path = format!("{}/{}.mp3", data_path(&username), &video_id);
         self.s3_client
-            .upload_file(&downloaded_file_path, &s3_result_file_path)?;
+            .upload_file(downloaded_file_path.to_path_buf(), s3_result_file_path.to_string())
+            .await?;
 
         let file_size = {
             let metadata = fs::metadata(
@@ -96,7 +108,7 @@ impl<'a> PodcastHandler<'a> {
             )?;
             metadata.len()
         };
-        if let Some(video_info) = self.youtube_sdk.get_video_info(&video_id)? {
+        if let Some(video_info) = self.youtube_sdk.get_video_info(&video_id).await? {
             let video_metadata = VideoMetadata {
                 file_size,
                 file_url: self.s3_client.get_public_url(&s3_result_file_path),
@@ -105,14 +117,21 @@ impl<'a> PodcastHandler<'a> {
                 name: video_info.title,
                 original_link: url.to_string(),
             };
-            let mut metadata = self.metadata.load_metadata(&metadata_path(&username))?;
-            metadata.push_front(video_metadata);
-            self.metadata
-                .update_metadata(&metadata_path(&username), &metadata)?;
+
+            println!("Start metadata upload");
+            let metadata = {
+                let _mutex_guard = self.metadata_load_upload_transaction_mutex.lock();
+                let mut m = self.metadata.load_metadata(&metadata_path(&username)).await?;
+                m.push_front(video_metadata);
+                self.metadata
+                    .update_metadata(&metadata_path(&username), &m).await?;
+                m
+            };
 
             let rss = Self::generate_rss(&username, &metadata)?;
             self.s3_client
-                .upload_object(rss.into_bytes(), &rss_path(&username))?;
+                .upload_object(rss.into_bytes(), &rss_path(&username))
+                .await?;
 
             Ok(self.s3_client.get_public_url(&rss_path(&username)))
         } else {
@@ -149,7 +168,8 @@ impl<'a> PodcastHandler<'a> {
         Ok(channel.to_string())
     }
 
-    fn download(&self, url: &str, path: &str) -> Result<Output> {
+    async fn download(&self, url: &str, path: &str) -> Result<Output> {
+        println!("Download started");
         let res = Command::new(&self.youtube_extractor)
             .env("https_proxy", "")
             .arg("-x")
@@ -157,6 +177,7 @@ impl<'a> PodcastHandler<'a> {
             .args(&["-o", path])
             .arg(url)
             .output()
+            .await
             .with_context(|| {
                 format!(
                     "Failed to execute the youtube-dl command to download url {}",
@@ -187,26 +208,27 @@ impl<'a> PodcastHandler<'a> {
     }
 }
 
-impl<'a> Handler for PodcastHandler<'a> {
+#[async_trait]
+impl<'a> AsyncHandler for PodcastHandler<'a> {
     fn name(&self) -> String {
         String::from("Youtube2Rss")
     }
 
-    fn process(&self, m: &Message) -> Result<()> {
+    async fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
             Some(s)
                 if s.starts_with("https://www.youtube.com/watch")
                     || s.starts_with("https://youtu.be/") =>
             {
-                let rss_feed_url = self.process_url(s, m.from.as_ref(), m.message_id)?;
-                Ok(self.telegram_client.send_message(SendMessage {
+                let rss_feed_url = self.process_url(s, m.from.as_ref(), m.message_id).await?;
+                Ok(self.telegram_client.async_send_message(SendMessage {
                     chat_id: m.chat.id.to_string(),
                     text: format!(
                         "RSS фид успешно обновлен и доступен по адресу: {}",
                         rss_feed_url
                     ),
                     reply_to_message_id: Some(&m.message_id),
-                })?)
+                }).await?)
             }
             _ => Ok(()),
         }

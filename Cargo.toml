@@ -20,12 +20,12 @@ serde_json = "1.0"
 
 base64 = "0.12.1"
 
-rusoto_s3 = "0.42"
-rusoto_core = "0.42"
+rusoto_s3 = "0.44"
+rusoto_core = "0.44"
 
 regex = "1"
 
-futures = "0.3"
+futures = { version = "0.3", features = ["compat"] }
 
 rmp-serde = "0.14.3"
 

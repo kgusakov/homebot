@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use reqwest::blocking::Client;
+use reqwest::Client;
 use serde::Deserialize;
 use std::{collections::VecDeque, env::var};
 
@@ -40,7 +40,7 @@ impl YoutubeSdk {
         }
     }
 
-    pub fn get_video_info(&self, video_id: &str) -> Result<Option<Snippet>> {
+    pub async fn get_video_info(&self, video_id: &str) -> Result<Option<Snippet>> {
         let url = format!(
             "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}",
             video_id, self.api_key
@@ -49,6 +49,7 @@ impl YoutubeSdk {
             .http_client
             .get(&url)
             .send()
+            .await
             .with_context(|| {
                 format!(
                     "Failed to send request for getting video info with id {}",
@@ -56,6 +57,7 @@ impl YoutubeSdk {
                 )
             })?
             .json()
+            .await
             .with_context(|| {
                 format!(
                     "Failed to deserialize result of video info request with id {}",

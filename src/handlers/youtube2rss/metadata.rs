@@ -27,8 +27,8 @@ impl Metadata {
         }
     }
 
-    pub fn load_metadata<'a>(&self, s3_path: &'a str) -> Result<VecDeque<VideoMetadata>> {
-        Ok(match self.s3_storage.download_object(s3_path) {
+    pub async fn load_metadata<'a>(&self, s3_path: &'a str) -> Result<VecDeque<VideoMetadata>> {
+        Ok(match self.s3_storage.download_object(s3_path).await {
             Ok(d) => Ok(rmp_serde::from_read(d.as_slice())?),
             Err(e) => match e.downcast_ref::<rusoto_core::RusotoError<rusoto_s3::GetObjectError>>()
             {
@@ -41,12 +41,17 @@ impl Metadata {
         }?)
     }
 
-    pub fn update_metadata(&self, s3_path: &str, data: &VecDeque<VideoMetadata>) -> Result<()> {
+    pub async fn update_metadata(
+        &self,
+        s3_path: &str,
+        data: &VecDeque<VideoMetadata>,
+    ) -> Result<()> {
         let mut buf = Vec::new();
         data.serialize(&mut Serializer::new(&mut buf))
             .with_context(|| format!("Can't serialize metadata for the path: '{}'", s3_path))?;
         self.s3_storage
             .upload_object(buf, s3_path)
+            .await
             .with_context(|| format!("Can't upload metadata to the path: '{}'", s3_path))?;
         Ok(())
     }
