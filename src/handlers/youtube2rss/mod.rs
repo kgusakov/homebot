@@ -115,23 +115,22 @@ impl<'a> PodcastHandler<'a> {
                 original_link: url.to_string(),
             };
 
-            let metadata = {
+            {
                 let _mutex_guard = self.metadata_load_upload_transaction_mutex.lock();
-                let mut m = self
+                let mut metadata = self
                     .metadata
                     .load_metadata(&metadata_path(&username))
                     .await?;
-                m.push_front(video_metadata);
+                metadata.push_front(video_metadata);
                 self.metadata
-                    .update_metadata(&metadata_path(&username), &m)
+                    .update_metadata(&metadata_path(&username), &metadata)
                     .await?;
-                m
-            };
 
-            let rss = Self::generate_rss(&username, &metadata)?;
-            self.s3_client
-                .upload_object(rss.into_bytes(), &rss_path(&username))
-                .await?;
+                let rss = Self::generate_rss(&username, &metadata)?;
+                self.s3_client
+                    .upload_object(rss.into_bytes(), &rss_path(&username))
+                    .await?;
+            };
 
             Ok(self.s3_client.get_public_url(&rss_path(&username)))
         } else {
