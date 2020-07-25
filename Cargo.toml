@@ -6,6 +6,12 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["healthcheck"]
+healthcheck = []
+torrent = []
+youtube2rss = []
+
 [dependencies]
 reqwest = { version = "0.10", features = ["json", "socks", "blocking"] }
 serde = { version = "1.0", features = ["derive"] }

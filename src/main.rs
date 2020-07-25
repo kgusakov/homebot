@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate log;
+use log::error;
 
 mod handlers;
 mod telegram_api;

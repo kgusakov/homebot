@@ -1,6 +1,9 @@
-pub mod healthcheck;
-pub mod torrent;
-pub mod youtube2rss;
+#[cfg(feature = "healthcheck")]
+mod healthcheck;
+#[cfg(feature = "torrent")]
+mod torrent;
+#[cfg(feature = "youtube2rss")]
+mod youtube2rss;
 
 use crate::telegram_api::{Message, SendMessage, TelegramClient, Update};
 use crate::HANDLER_CONTEXT;
@@ -11,6 +14,7 @@ use lazy_static::lazy_static;
 use std::sync::mpsc::{channel, Sender};
 use std::thread::spawn;
 use tokio;
+use log::error;
 
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
@@ -29,11 +33,19 @@ trait AsyncHandler {
 
 lazy_static! {
     static ref SYNC_HANDLERS: Vec<Box<dyn Handler + Sync + Send>> = vec![];
-    static ref ASYNC_HANDLERS: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![
-        Box::new(healthcheck::HealthCheckHandler::new(&HANDLER_CONTEXT)),
-        Box::new(torrent::TorrentHandler::new(&HANDLER_CONTEXT)),
-        Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)),
-    ];
+    static ref ASYNC_HANDLERS: Vec<Box<dyn AsyncHandler + Sync + Send>> = {
+        let  mut handlers: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![];
+        #[cfg(feature = "healthcheck")]
+        handlers.push(Box::new(healthcheck::HealthCheckHandler::new(&HANDLER_CONTEXT)));
+
+        #[cfg(feature = "torrent")]
+        handlers.push(Box::new(torrent::TorrentHandler::new(&HANDLER_CONTEXT)));
+
+        #[cfg(feature = "youtube2rss")]
+        handlers.push(Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)));
+
+        handlers
+    };
 }
 
 pub fn init_sync_handlers_loop() -> Sender<Update> {
