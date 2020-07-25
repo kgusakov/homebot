@@ -11,10 +11,10 @@ use crate::HANDLER_CONTEXT;
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
+use log::error;
 use std::sync::mpsc::{channel, Sender};
 use std::thread::spawn;
 use tokio;
-use log::error;
 
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
@@ -34,9 +34,11 @@ trait AsyncHandler {
 lazy_static! {
     static ref SYNC_HANDLERS: Vec<Box<dyn Handler + Sync + Send>> = vec![];
     static ref ASYNC_HANDLERS: Vec<Box<dyn AsyncHandler + Sync + Send>> = {
-        let  mut handlers: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![];
+        let mut handlers: Vec<Box<dyn AsyncHandler + Sync + Send>> = vec![];
         #[cfg(feature = "healthcheck")]
-        handlers.push(Box::new(healthcheck::HealthCheckHandler::new(&HANDLER_CONTEXT)));
+        handlers.push(Box::new(healthcheck::HealthCheckHandler::new(
+            &HANDLER_CONTEXT,
+        )));
 
         #[cfg(feature = "torrent")]
         handlers.push(Box::new(torrent::TorrentHandler::new(&HANDLER_CONTEXT)));

@@ -5,7 +5,9 @@ mod youtube_sdk;
 use super::AsyncHandler;
 use crate::{HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
-use std::{collections::VecDeque, env, fs, path::Path, process::Output, time::SystemTime};
+use std::{
+    collections::VecDeque, env, env::temp_dir, fs, path::PathBuf, process::Output, time::SystemTime,
+};
 use youtube_sdk::YoutubeSdk;
 
 use metadata::*;
@@ -43,7 +45,7 @@ pub struct PodcastHandler<'a> {
     youtube_extractor: String,
     youtube_sdk: YoutubeSdk,
     id_regex: Regex,
-    tmp_dir: String,
+    tmp_dir: PathBuf,
     s3_client: S3Storage,
     metadata: Metadata,
     telegram_client: &'a TelegramClient<'a>,
@@ -56,8 +58,7 @@ impl<'a> PodcastHandler<'a> {
             env::var("YOUTUBE_EXTRACTOR")
                 .expect("Provide YOUTUBE_EXTRACTOR environment variable please")
         };
-        let tmp_dir =
-            { env::var("BOT_TMP_DIR").expect("Provide BOT_TMP_DIR environment variable please") };
+        let tmp_dir = temp_dir();
 
         Self {
             youtube_extractor,
@@ -79,15 +80,15 @@ impl<'a> PodcastHandler<'a> {
             ))?
             .first_name;
         let video_id = self.extract_id(url)?;
-        let download_path = Path::new(&self.tmp_dir)
+        let download_path = self
+            .tmp_dir
             .join(format!("{}{}", message_id, "%(id)s.%(ext)s"))
             .to_str()
             .expect("Failed to convert to string file path of mp3 file")
             .to_string();
         self.download(url, &download_path).await?;
 
-        let downloaded_file_path =
-            Path::new(&self.tmp_dir).join(format!("{}{}.mp3", message_id, video_id));
+        let downloaded_file_path = self.tmp_dir.join(format!("{}{}.mp3", message_id, video_id));
         let s3_result_file_path = format!("{}/{}.mp3", data_path(&username), &video_id);
         self.s3_client
             .upload_file(
