@@ -16,11 +16,11 @@ pub struct VideoMetadata {
     pub original_link: String,
 }
 
-pub struct Metadata {
+pub struct MetadataStorage {
     s3_storage: S3Storage,
 }
 
-impl Metadata {
+impl MetadataStorage {
     pub fn new() -> Self {
         Self {
             s3_storage: S3Storage::new(),

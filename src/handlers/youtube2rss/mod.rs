@@ -25,7 +25,7 @@ use anyhow::{Context, Result};
 
 use async_trait::async_trait;
 
-use futures::lock::Mutex;
+use tokio::sync::Mutex;
 
 use tokio::process::Command;
 
@@ -47,9 +47,8 @@ pub struct PodcastHandler<'a> {
     id_regex: Regex,
     tmp_dir: PathBuf,
     s3_client: S3Storage,
-    metadata: Metadata,
+    metadata: Mutex<MetadataStorage>,
     telegram_client: &'a TelegramClient<'a>,
-    metadata_load_upload_transaction_mutex: Mutex<bool>,
 }
 
 impl<'a> PodcastHandler<'a> {
@@ -67,9 +66,8 @@ impl<'a> PodcastHandler<'a> {
                 .expect("Failed to compile video id Regex"),
             tmp_dir,
             s3_client: S3Storage::new(),
-            metadata: Metadata::new(),
+            metadata: Mutex::new(MetadataStorage::new()),
             telegram_client: handler_context.telegram_client,
-            metadata_load_upload_transaction_mutex: Mutex::new(false),
         }
     }
 
@@ -116,13 +114,12 @@ impl<'a> PodcastHandler<'a> {
             };
 
             {
-                let _mutex_guard = self.metadata_load_upload_transaction_mutex.lock();
-                let mut metadata = self
-                    .metadata
+                let metadta_storage = self.metadata.lock().await;
+                let mut metadata = metadta_storage
                     .load_metadata(&metadata_path(&username))
                     .await?;
                 metadata.push_front(video_metadata);
-                self.metadata
+                metadta_storage
                     .update_metadata(&metadata_path(&username), &metadata)
                     .await?;
 
