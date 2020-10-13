@@ -55,4 +55,15 @@ impl MetadataStorage {
             .with_context(|| format!("Can't upload metadata to the path: '{}'", s3_path))?;
         Ok(())
     }
+
+    pub async fn add_metadata(
+        &self,
+        s3_path: &str,
+        data: VideoMetadata,
+    ) -> Result<VecDeque<VideoMetadata>> {
+        let mut metadata = self.load_metadata(s3_path).await?;
+        metadata.push_front(data);
+        self.update_metadata(s3_path, &metadata).await?;
+        Ok(metadata)
+    }
 }

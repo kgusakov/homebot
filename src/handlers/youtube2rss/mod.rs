@@ -10,6 +10,9 @@ use std::{
 };
 use youtube_sdk::YoutubeSdk;
 
+use reqwest::header::CONTENT_TYPE;
+use reqwest::Client;
+
 use metadata::*;
 
 use regex::Regex;
@@ -49,6 +52,7 @@ pub struct PodcastHandler<'a> {
     s3_client: S3Storage,
     metadata: Mutex<MetadataStorage>,
     telegram_client: &'a TelegramClient<'a>,
+    http_client: &'a Client,
 }
 
 impl<'a> PodcastHandler<'a> {
@@ -68,7 +72,49 @@ impl<'a> PodcastHandler<'a> {
             s3_client: S3Storage::new(),
             metadata: Mutex::new(MetadataStorage::new()),
             telegram_client: handler_context.telegram_client,
+            http_client: handler_context.async_http_client,
         }
+    }
+
+    async fn process_mp3(&self, user: Option<&User>, url: String) -> Result<String> {
+        let username = &user
+            .ok_or(anyhow!(
+                "Empty user of message. Can't manage podcasts for empty user"
+            ))?
+            .first_name;
+        let content = self.http_client.get(&url).send().await?.bytes().await?;
+        let file_name = url
+            .split("/")
+            .last()
+            .ok_or(anyhow!("Can't extract mp3 file name"))?;
+
+        let s3_result_file_path: String = format!("{}/{}.mp3", data_path(&username), file_name);
+        self.s3_client
+            .upload_bytes(content.to_vec(), s3_result_file_path.to_string())
+            .await?;
+
+        let file_size = content.len() as u64;
+        {
+            let mp3_metadata = VideoMetadata {
+                file_size,
+                file_url: self.s3_client.get_public_url(&s3_result_file_path),
+                video_id: String::new(),
+                created_at: SystemTime::now(),
+                name: file_name.to_string(),
+                original_link: url,
+            };
+            let metadta_storage = self.metadata.lock().await;
+            let metadata = metadta_storage
+                .add_metadata(&metadata_path(&username), mp3_metadata)
+                .await?;
+
+            let rss = Self::generate_rss(&username, &metadata)?;
+            self.s3_client
+                .upload_object(rss.into_bytes(), &rss_path(&username))
+                .await?;
+        };
+
+        Ok(self.s3_client.get_public_url(&rss_path(&username)))
     }
 
     async fn process_url(&self, url: &str, user: Option<&User>, message_id: i64) -> Result<String> {
@@ -114,13 +160,9 @@ impl<'a> PodcastHandler<'a> {
             };
 
             {
-                let metadta_storage = self.metadata.lock().await;
-                let mut metadata = metadta_storage
-                    .load_metadata(&metadata_path(&username))
-                    .await?;
-                metadata.push_front(video_metadata);
-                metadta_storage
-                    .update_metadata(&metadata_path(&username), &metadata)
+                let metadata_storage = self.metadata.lock().await;
+                let metadata = metadata_storage
+                    .add_metadata(&metadata_path(&username), video_metadata)
                     .await?;
 
                 let rss = Self::generate_rss(&username, &metadata)?;
@@ -201,6 +243,38 @@ impl<'a> PodcastHandler<'a> {
             })
             .ok_or(anyhow!("Can't parse video id from youtube url {}", s))
     }
+
+    async fn send_success_message(
+        &self,
+        chat_id: &str,
+        message_id: i64,
+        rss_feed_url: &str,
+    ) -> Result<()> {
+        self.telegram_client
+            .async_send_message(SendMessage {
+                chat_id: chat_id.to_string(),
+                text: format!(
+                    "RSS фид успешно обновлен и доступен по адресу: {}",
+                    rss_feed_url
+                ),
+                reply_to_message_id: Some(&message_id),
+            })
+            .await
+    }
+
+    async fn is_audio(&self, url: &str) -> Result<bool> {
+        match self
+            .http_client
+            .head(url)
+            .send()
+            .await?
+            .headers()
+            .get(CONTENT_TYPE)
+        {
+            Some(header) => Ok(header.to_str()?.to_string() == "audio/mpeg"),
+            None => Ok(false),
+        }
+    }
 }
 
 #[async_trait]
@@ -210,23 +284,21 @@ impl<'a> AsyncHandler for PodcastHandler<'a> {
     }
 
     async fn process(&self, m: &Message) -> Result<()> {
-        match &m.text {
-            Some(s)
+        match m {
+            Message { text: Some(s), .. }
                 if s.starts_with("https://www.youtube.com/watch")
                     || s.starts_with("https://youtu.be/") =>
             {
                 let rss_feed_url = self.process_url(s, m.from.as_ref(), m.message_id).await?;
-                Ok(self
-                    .telegram_client
-                    .async_send_message(SendMessage {
-                        chat_id: m.chat.id.to_string(),
-                        text: format!(
-                            "RSS фид успешно обновлен и доступен по адресу: {}",
-                            rss_feed_url
-                        ),
-                        reply_to_message_id: Some(&m.message_id),
-                    })
-                    .await?)
+                self.send_success_message(&m.chat.id.to_string(), m.message_id, &rss_feed_url)
+                    .await
+            }
+            Message { text: Some(s), .. }
+                if s.starts_with("http") && (s.ends_with(".mp3") || self.is_audio(s).await?) =>
+            {
+                let rss_feed_url = self.process_mp3(m.from.as_ref(), s.clone()).await?;
+                self.send_success_message(&m.chat.id.to_string(), m.message_id, &rss_feed_url)
+                    .await
             }
             _ => Ok(()),
         }

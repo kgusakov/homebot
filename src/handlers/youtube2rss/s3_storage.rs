@@ -92,12 +92,16 @@ impl S3Storage {
             .await?
         }?;
 
+        self.upload_bytes(body, s3_path).await
+    }
+
+    pub async fn upload_bytes(&self, bytes: Vec<u8>, s3_path: String) -> Result<()> {
         Ok(self
             .s3_client()
             .put_object(PutObjectRequest {
                 bucket: self.bucket_name.to_owned(),
                 key: s3_path.to_string(),
-                body: Some(body.into()),
+                body: Some(bytes.into()),
                 ..Default::default()
             })
             .await
