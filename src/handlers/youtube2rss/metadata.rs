@@ -14,6 +14,12 @@ pub struct VideoMetadata {
     pub created_at: SystemTime,
     pub name: String,
     pub original_link: String,
+    #[serde(default = "default_mime_type")]
+    pub mime_type: String
+}
+
+fn default_mime_type() -> String {
+    "audio/mp3".to_string()
 }
 
 pub struct MetadataStorage {
