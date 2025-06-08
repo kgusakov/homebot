@@ -1,0 +1,38 @@
+name: package
+on: workflow_dispatch
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.87.0-alpine3.22
+    steps:
+      - run: apk add nodejs alpine-sdk openssl-dev openssl-libs-static
+      - uses: actions/checkout@v4
+      - name: Build binary
+        run: cargo build --all-features --release
+      - name: Build Apline APK
+        working-directory: ./packages
+        run: |
+          abuild-keygen -n -a
+          cp /root/.abuild/*.rsa.pub /etc/apk/keys/
+          abuild -F checksum
+          abuild -r -F
+      - uses: actions/upload-artifact@v3
+        with:
+          name: homebot
+          path: /root/packages/homebot/x86_64/*.apk
+  
+  local-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: homebot
+      - run: |
+          mkdir -p ~/.ssh/
+          echo "${{secrets.SSH_PRIVATE_KEY}}" > ~/.ssh/private.key
+          chmod 600 ~/.ssh/private.key
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/private.key *.apk root@${{ vars.DEPLOY_HOST }}:/tmp/
+          ssh -tt -o StrictHostKeyChecking=no -i ~/.ssh/private.key root@${{ vars.DEPLOY_HOST }} "apk add --allow-untrusted /tmp/homebot-*.apk;rc-service homebot restart;rm /tmp/homebot-*.apk"
+      

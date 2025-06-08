@@ -1,0 +1,10 @@
+#!/sbin/openrc-run
+
+command="/usr/bin/homebot"
+pidfile="/run/$RC_SVCNAME.pid"
+command_background="yes"
+
+depend() {
+        need net
+        use dns
+}

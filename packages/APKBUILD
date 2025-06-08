@@ -1,0 +1,21 @@
+# Contributor: Kirill Gusakov <kgusakov@gmail.com>
+# Maintainer: Kirill Gusakov <kgusakov@gmail.com>
+pkgname=homebot
+pkgver=0.1
+pkgrel=0
+pkgdesc="Homebot"
+arch="all"
+url="https://github.com/kgusakov/homebot"
+license="Unlicense"
+depends=""
+install=""
+builddir="$srcdir/$pkgname-$pkgver"
+source="
+        ../target/release/core
+        homebot.openrc
+        "
+
+package() {
+        install -Dm755 "$srcdir"/core "$pkgdir"/usr/bin/homebot
+        install -Dm755 "$srcdir"/homebot.openrc "$pkgdir"/etc/init.d/homebot
+}
