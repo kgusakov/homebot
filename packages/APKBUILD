@@ -13,9 +13,11 @@ builddir="$srcdir/$pkgname-$pkgver"
 source="
         ../target/release/core
         homebot.openrc
+        homebot.profile
         "
 
 package() {
         install -Dm755 "$srcdir"/core "$pkgdir"/usr/bin/homebot
         install -Dm755 "$srcdir"/homebot.openrc "$pkgdir"/etc/init.d/homebot
+        install -Dm755 "$srcdir"/homebot.profile "$pkgdir"/etc/conf.d/homebot
 }
