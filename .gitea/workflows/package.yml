@@ -10,7 +10,7 @@ jobs:
       - run: apk add nodejs alpine-sdk openssl-dev openssl-libs-static
       - uses: actions/checkout@v4
       - name: Build binary
-        run: cargo build --all-features --release
+        run: cargo build --release --features "healthcheck torrent downloader"
       - name: Build Apline APK
         working-directory: ./packages
         run: |
