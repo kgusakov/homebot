@@ -15,7 +15,7 @@ pub struct VideoMetadata {
     pub name: String,
     pub original_link: String,
     #[serde(default = "default_mime_type")]
-    pub mime_type: String
+    pub mime_type: String,
 }
 
 fn default_mime_type() -> String {

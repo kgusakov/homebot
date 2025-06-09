@@ -102,7 +102,7 @@ impl<'a> PodcastHandler<'a> {
                 created_at: SystemTime::now(),
                 name: file_name.to_string(),
                 original_link: url,
-                mime_type: "audio/mp3".to_string()
+                mime_type: "audio/mp3".to_string(),
             };
             let metadta_storage = self.metadata.lock().await;
             let metadata = metadta_storage
@@ -118,7 +118,13 @@ impl<'a> PodcastHandler<'a> {
         Ok(self.s3_client.get_public_url(&rss_path(&username)))
     }
 
-    async fn process_url(&self, url: &str, user: Option<&User>, message_id: i64, extension: String) -> Result<String> {
+    async fn process_url(
+        &self,
+        url: &str,
+        user: Option<&User>,
+        message_id: i64,
+        extension: String,
+    ) -> Result<String> {
         let username = &user
             .ok_or(anyhow!(
                 "Empty user of message. Can't manage podcasts for empty user"
@@ -133,7 +139,9 @@ impl<'a> PodcastHandler<'a> {
             .to_string();
         self.download(url, &download_path).await?;
 
-        let downloaded_file_path = self.tmp_dir.join(format!("{}{}.{}", message_id, video_id, extension));
+        let downloaded_file_path = self
+            .tmp_dir
+            .join(format!("{}{}.{}", message_id, video_id, extension));
         let s3_result_file_path = format!("{}/{}.{}", data_path(&username), &video_id, extension);
         self.s3_client
             .upload_file(
@@ -158,7 +166,7 @@ impl<'a> PodcastHandler<'a> {
                 created_at: SystemTime::now(),
                 name: video_info.title,
                 original_link: url.to_string(),
-                mime_type: format!("audio/{}", extension)
+                mime_type: format!("audio/{}", extension),
             };
 
             {
@@ -290,7 +298,9 @@ impl<'a> AsyncHandler for PodcastHandler<'a> {
                 if s.starts_with("https://www.youtube.com/watch")
                     || s.starts_with("https://youtu.be/") =>
             {
-                let rss_feed_url = self.process_url(s, m.from.as_ref(), m.message_id, "m4a".to_string()).await?;
+                let rss_feed_url = self
+                    .process_url(s, m.from.as_ref(), m.message_id, "m4a".to_string())
+                    .await?;
                 self.send_success_message(&m.chat.id.to_string(), m.message_id, &rss_feed_url)
                     .await
             }

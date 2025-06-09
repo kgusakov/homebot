@@ -11,6 +11,7 @@ default = ["healthcheck"]
 healthcheck = []
 torrent = []
 youtube2rss = []
+downloader = []
 
 [dependencies]
 reqwest = { version = "0.10", features = ["json", "socks", "blocking"] }

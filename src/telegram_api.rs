@@ -1,7 +1,10 @@
+use std::path::{Path, PathBuf};
+
 use anyhow::{Context, Result};
 use bytes::Bytes;
-use reqwest::{blocking, Client};
+use reqwest::{blocking, multipart::Part, Client};
 use serde::{Deserialize, Serialize};
+use tokio::fs;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct TelegramResponse<T> {
@@ -129,6 +132,32 @@ impl<'a> TelegramClient<'a> {
                 format!(
                     "Failed to parse response for getting file with id {}",
                     file_id
+                )
+            })
+    }
+
+    pub async fn async_send_file(
+        &self,
+        chat_id: &str,
+        path: PathBuf,
+    ) -> Result<TelegramResponse<Message>> {
+        let file = fs::read(path.clone()).await?;
+        let file_name = String::from(path.file_name().unwrap().to_str().unwrap());
+        let file_part = reqwest::multipart::Part::bytes(file).file_name(file_name);
+        let form = reqwest::multipart::Form::new().part("video", file_part);
+
+        self.async_http_client
+            .post(&self.api_url(&format!("sendVideo?chat_id={}", chat_id)))
+            .multipart(form)
+            .send()
+            .await
+            .with_context(|| format!("Failed to send file with path {:?}", path))?
+            .json()
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to parse response with file upload for file with path {:?}",
+                    path
                 )
             })
     }

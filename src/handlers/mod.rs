@@ -1,3 +1,5 @@
+#[cfg(feature = "downloader")]
+mod downloader;
 #[cfg(feature = "healthcheck")]
 mod healthcheck;
 #[cfg(feature = "torrent")]
@@ -5,6 +7,7 @@ mod torrent;
 #[cfg(feature = "youtube2rss")]
 mod youtube2rss;
 
+use crate::handlers::downloader::DownloaderHandler;
 use crate::telegram_api::{Message, SendMessage, TelegramClient, Update};
 use crate::HANDLER_CONTEXT;
 
@@ -45,6 +48,9 @@ lazy_static! {
 
         #[cfg(feature = "youtube2rss")]
         handlers.push(Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)));
+
+        #[cfg(feature = "downloader")]
+        handlers.push(Box::new(DownloaderHandler::new(&HANDLER_CONTEXT)));
 
         handlers
     };
