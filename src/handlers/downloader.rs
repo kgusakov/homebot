@@ -24,6 +24,7 @@ pub struct DownloaderHandler<'a> {
     tmp_dir: PathBuf,
     socks_proxy_url: String,
     yt_dlp_path: PathBuf,
+    cookies_path: PathBuf,
 }
 
 #[async_trait]
@@ -54,6 +55,11 @@ impl<'a> DownloaderHandler<'a> {
                 .expect("Provide DOWNLOADER_YT_DLP_PATH environment variable please"),
         );
 
+        let cookies_path = PathBuf::from(
+            env::var("DOWNLOADER_COOKIES_PATH")
+                .expect("Provide DOWNLOADER_COOKIES_PATH environment variable please"),
+        );
+
         let tmp_dir = temp_dir();
 
         Self {
@@ -65,6 +71,7 @@ impl<'a> DownloaderHandler<'a> {
             tmp_dir,
             socks_proxy_url,
             yt_dlp_path,
+            cookies_path,
         }
     }
 
@@ -97,7 +104,13 @@ impl<'a> DownloaderHandler<'a> {
                 path.to_str().expect("Failed to convert path to string"),
             ])
             .args(&["--proxy", self.socks_proxy_url.as_str()])
-            .args(&["--cookies-from-browser", "firefox"])
+            .args(&[
+                "--cookies",
+                self.cookies_path
+                    .as_path()
+                    .to_str()
+                    .ok_or(anyhow!("Can't convert path to string"))?,
+            ])
             .arg(url)
             .output()
             .await
