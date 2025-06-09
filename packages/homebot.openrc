@@ -3,6 +3,8 @@
 command="/usr/bin/homebot"
 pidfile="/run/$RC_SVCNAME.pid"
 command_background="yes"
+output_log="/var/log/homebot.log"
+error_log="/var/log/homebot.err"
 
 depend() {
         need net

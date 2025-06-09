@@ -10,8 +10,6 @@ license="Unlicense"
 depends="yt-dlp"
 install=""
 builddir="$srcdir/$pkgname-$pkgver"
-output_log="/var/log/homebot.log"
-error_log="/var/log/homebot.err"
 source="
         ../target/release/core
         homebot.openrc
