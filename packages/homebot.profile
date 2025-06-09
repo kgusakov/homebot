@@ -11,5 +11,6 @@ export BOT_BUCKET_NAME=
 export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 
+# socks5://host:port
 export DOWNLOADER_SOCKS_PROXY=
 export DOWNLOADER_YT_DLP_PATH=
