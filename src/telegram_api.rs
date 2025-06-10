@@ -15,7 +15,7 @@ pub struct TelegramResponse<T> {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Update {
     pub update_id: i32,
-    pub message: Message,
+    pub message: Option<Message>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

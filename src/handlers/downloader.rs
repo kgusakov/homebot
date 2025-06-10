@@ -1,6 +1,6 @@
 use std::{
     env::{self, temp_dir},
-    fs::{remove_dir, remove_dir_all},
+    fs::remove_dir_all,
     path::{Path, PathBuf},
     process::Output,
 };
