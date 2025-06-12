@@ -4,10 +4,12 @@ mod handlers;
 mod telegram_api;
 
 use handlers::{init_async_handlers_loop, init_sync_handlers_loop};
+use std::collections::HashSet;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
+use std::iter::FromIterator;
 use telegram_api::*;
 
 use lazy_static::lazy_static;
@@ -44,6 +46,16 @@ fn main() {
     let state_file_path =
         env::var("BOT_STATE_PATH").expect("Provide BOT_STATE_PATH environment variable please");
 
+    let white_list: HashSet<i64> = HashSet::from_iter(
+        env::var("USERS_WHITE_LIST")
+            .expect("Provide USERS_WHITE_LIST environment variable please")
+            .split(",")
+            .map(|s| {
+                s.parse::<i64>()
+                    .expect("Environment variable USERS_WHITE_LIST has the wrong chat ids")
+            }),
+    );
+
     let mut update_id = {
         let mut file = OpenOptions::new()
             .read(true)
@@ -66,14 +78,27 @@ fn main() {
         match TELEGRAM_CLIENT.get_updates(update_id + 1) {
             Ok(r) => {
                 for update in r.clone().result {
-                    tx_async
-                        .send(update)
-                        .expect("Channel for async handlers is broken");
+                    match &update {
+                        Update {
+                            update_id: _,
+                            message: Some(m),
+                        } if white_list.contains(&m.chat.id) => tx_async
+                            .send(update)
+                            .expect("channel for async handlers is broken"),
+                        _ => (),
+                    }
                 }
 
                 for update in r.clone().result {
-                    tx.send(update)
-                        .expect("Channel for sync handlers is broken");
+                    match &update {
+                        Update {
+                            update_id: _,
+                            message: Some(m),
+                        } if white_list.contains(&m.chat.id) => tx
+                            .send(update)
+                            .expect("Channel for async handlers is broken"),
+                        _ => (),
+                    }
                 }
 
                 update_id = r

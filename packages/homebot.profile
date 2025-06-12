@@ -1,6 +1,8 @@
 export TELEGRAM_TOKEN=
 # Full file path
 export BOT_STATE_PATH=
+# , delimited list of chat ids (user ids as well - for private chats)
+export USERS_WHITE_LIST=
 
 # http://host:port/transmission/rpc
 export TRANSMISSION_ADDRESS=
