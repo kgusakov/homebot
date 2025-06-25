@@ -24,6 +24,7 @@ pub struct DownloaderHandler<'a> {
     tmp_dir: PathBuf,
     socks_proxy_url: String,
     yt_dlp_path: PathBuf,
+    yt_dlp_opts: String,
     cookies_path: PathBuf,
 }
 
@@ -55,6 +56,8 @@ impl<'a> DownloaderHandler<'a> {
                 .expect("Provide DOWNLOADER_YT_DLP_PATH environment variable please"),
         );
 
+        let yt_dlp_opts = env::var("DOWNLOADER_YT_DLP_OPTS").unwrap_or(String::from(""));
+
         let cookies_path = PathBuf::from(
             env::var("DOWNLOADER_COOKIES_PATH")
                 .expect("Provide DOWNLOADER_COOKIES_PATH environment variable please"),
@@ -71,6 +74,7 @@ impl<'a> DownloaderHandler<'a> {
             tmp_dir,
             socks_proxy_url,
             yt_dlp_path,
+            yt_dlp_opts,
             cookies_path,
         }
     }
@@ -111,6 +115,7 @@ impl<'a> DownloaderHandler<'a> {
                     .to_str()
                     .ok_or(anyhow!("Can't convert path to string"))?,
             ])
+            .args(&self.yt_dlp_opts.split(" ").collect::<Vec<&str>>())
             .arg(url)
             .output()
             .await
