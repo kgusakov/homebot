@@ -7,6 +7,7 @@ use std::{
 
 use async_trait::async_trait;
 use regex::Regex;
+use shlex::Shlex;
 use tokio::{fs::create_dir, process::Command};
 
 use crate::{handlers::AsyncHandler, HandlerContext, Message, TelegramClient};
@@ -24,7 +25,7 @@ pub struct DownloaderHandler<'a> {
     tmp_dir: PathBuf,
     socks_proxy_url: String,
     yt_dlp_path: PathBuf,
-    yt_dlp_opts: String,
+    yt_dlp_opts: Vec<String>,
     cookies_path: PathBuf,
 }
 
@@ -56,7 +57,9 @@ impl<'a> DownloaderHandler<'a> {
                 .expect("Provide DOWNLOADER_YT_DLP_PATH environment variable please"),
         );
 
-        let yt_dlp_opts = env::var("DOWNLOADER_YT_DLP_OPTS").unwrap_or(String::from(""));
+        let yt_dlp_opts =
+            Shlex::new(&env::var("DOWNLOADER_YT_DLP_OPTS").unwrap_or(String::from("")))
+                .collect::<Vec<String>>();
 
         let cookies_path = PathBuf::from(
             env::var("DOWNLOADER_COOKIES_PATH")
@@ -115,7 +118,7 @@ impl<'a> DownloaderHandler<'a> {
                     .to_str()
                     .ok_or(anyhow!("Can't convert path to string"))?,
             ])
-            .args(&self.yt_dlp_opts.split(" ").collect::<Vec<&str>>())
+            .args(&self.yt_dlp_opts)
             .arg(url)
             .output()
             .await
