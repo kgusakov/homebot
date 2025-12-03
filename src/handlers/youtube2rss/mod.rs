@@ -5,6 +5,7 @@ mod youtube_sdk;
 use super::AsyncHandler;
 use crate::{HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
+use shlex::Shlex;
 use std::{
     collections::VecDeque, env, env::temp_dir, fs, path::PathBuf, process::Output, time::SystemTime,
 };
@@ -46,6 +47,7 @@ fn rss_path(user: &str) -> String {
 
 pub struct PodcastHandler<'a> {
     youtube_extractor: String,
+    youtube_extractor_opts: Vec<String>,
     youtube_sdk: YoutubeSdk,
     id_regex: Regex,
     tmp_dir: PathBuf,
@@ -61,10 +63,16 @@ impl<'a> PodcastHandler<'a> {
             env::var("YOUTUBE_EXTRACTOR")
                 .expect("Provide YOUTUBE_EXTRACTOR environment variable please")
         };
+
+        let youtube_extractor_opts =
+            Shlex::new(&env::var("YOUTUBE_EXTRACTOR_OPTS").unwrap_or(String::from("")))
+                .collect::<Vec<String>>();
+
         let tmp_dir = temp_dir();
 
         Self {
             youtube_extractor,
+            youtube_extractor_opts,
             youtube_sdk: YoutubeSdk::new(),
             id_regex: Regex::new(r"(v=|youtu.be/)(?P<id>[^&]*)")
                 .expect("Failed to compile video id Regex"),
@@ -218,7 +226,7 @@ impl<'a> PodcastHandler<'a> {
 
     async fn download(&self, url: &str, path: &str) -> Result<Output> {
         let res = Command::new(&self.youtube_extractor)
-            .env("https_proxy", "")
+            .args(&self.youtube_extractor_opts)
             .args(&["-f", "bestaudio[ext=m4a]"])
             .args(&["-o", path])
             .arg(url)

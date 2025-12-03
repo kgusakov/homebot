@@ -45,6 +45,7 @@ impl YoutubeSdk {
             "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={}&key={}",
             video_id, self.api_key
         );
+
         let mut resp: Resp = self
             .http_client
             .get(&url)
