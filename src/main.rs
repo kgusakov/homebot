@@ -39,7 +39,7 @@ lazy_static! {
     static ref TELEGRAM_CLIENT: TelegramClient<'static> = {
         let token =
             env::var("TELEGRAM_TOKEN").expect("Provide TELEGRAM_TOKEN environment variable please");
-        telegram_api::TelegramClient::new(token, &HTTP_CLIENT, &ASYNC_HTTP_CLIENT)
+        telegram_api::TelegramClient::new(token, &HTTP_CLIENT, &ASYNC_PROXY_HTTP_CLIENT)
     };
     static ref HANDLER_CONTEXT: HandlerContext<'static> = HandlerContext {
         telegram_client: &TELEGRAM_CLIENT,
