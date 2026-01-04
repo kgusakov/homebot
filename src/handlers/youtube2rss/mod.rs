@@ -307,6 +307,7 @@ impl<'a> AsyncHandler for PodcastHandler<'a> {
         match m {
             Message { text: Some(s), .. }
                 if s.starts_with("https://www.youtube.com/watch")
+                    || s.starts_with("https://www.youtube.com/live")
                     || s.starts_with("https://youtu.be/") =>
             {
                 let rss_feed_url = self
