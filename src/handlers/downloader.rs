@@ -89,9 +89,8 @@ impl<'a> DownloaderHandler<'a> {
 
         create_dir(message_download_tmp_dir.as_path()).await?;
 
-        let download_path = message_download_tmp_dir
-            // TODO support non-mp4 output
-            .join(format!("{}.mp4", video_id));
+        // TODO check that * doesn't produce multiple files and etc.
+        let download_path = message_download_tmp_dir.join(format!("{}.*", video_id));
 
         self.download(url, download_path.as_path()).await?;
 
