@@ -79,9 +79,10 @@ impl S3Storage {
             let f_p = file.clone();
             let s3_p = s3_path.clone();
             tokio::task::spawn_blocking(move || {
-                let mut f = std::fs::File::open(f_p).with_context(|| {
+                let mut f = std::fs::File::open(&f_p).with_context(|| {
                     format!(
-                        "Failed to open file during file upload to the path {}",
+                        "Failed to open file {} during file upload to the path {}",
+                        f_p.to_string_lossy(),
                         s3_p
                     )
                 })?;

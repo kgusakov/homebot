@@ -75,7 +75,7 @@ impl<'a> PodcastHandler<'a> {
             youtube_extractor,
             youtube_extractor_opts,
             youtube_sdk: YoutubeSdk::new(),
-            id_regex: Regex::new(r"(v=|youtu.be/)(?P<id>[^&]*)")
+            id_regex: Regex::new(r"(v=|live/|youtu.be/)(?P<id>[^&?]*)")
                 .expect("Failed to compile video id Regex"),
             tmp_dir,
             s3_client: S3Storage::new(),
@@ -146,11 +146,12 @@ impl<'a> PodcastHandler<'a> {
             .to_str()
             .expect("Failed to convert to string file path")
             .to_string();
-        self.download(url, &download_path).await?;
+        let downloaded_file_path: PathBuf =
+            String::from_utf8(self.download(url, &download_path).await?.stdout)
+                .with_context(|| "Can't stringify download path")?
+                .trim()
+                .into();
 
-        let downloaded_file_path = self
-            .tmp_dir
-            .join(format!("{}{}.{}", message_id, video_id, extension));
         let s3_result_file_path = format!("{}/{}.{}", data_path(&username), &video_id, extension);
         self.s3_client
             .upload_file(
@@ -230,12 +231,13 @@ impl<'a> PodcastHandler<'a> {
             .args(&self.youtube_extractor_opts)
             .args(&["-f", "bestaudio[ext=m4a]"])
             .args(&["-o", path])
+            .args(&["--print", "after_move:filepath"])
             .arg(url)
             .output()
             .await
             .with_context(|| {
                 format!(
-                    "Failed to execute the youtube-dl command to download url {}",
+                    "Failed to execute the yt-dlp command to download url {}",
                     url
                 )
             })?;
