@@ -6,6 +6,7 @@ use super::AsyncHandler;
 use crate::{HandlerContext, Message, SendMessage, TelegramClient, User};
 use s3_storage::S3Storage;
 use shlex::Shlex;
+use std::time::Duration;
 use std::{
     collections::VecDeque, env, env::temp_dir, fs, path::PathBuf, process::Output, time::SystemTime,
 };
@@ -80,7 +81,7 @@ impl<'a> PodcastHandler<'a> {
             s3_client: S3Storage::new(),
             metadata: Mutex::new(MetadataStorage::new()),
             telegram_client: handler_context.telegram_client,
-            http_client: handler_context.async_http_client,
+            http_client: handler_context.async_proxy_http_client,
         }
     }
 
@@ -283,8 +284,10 @@ impl<'a> PodcastHandler<'a> {
         match self
             .http_client
             .head(url)
+            .timeout(Duration::from_secs(10))
             .send()
-            .await?
+            .await
+            .with_context(|| format!("Can't check if url {} contains audio or not", url))?
             .headers()
             .get(CONTENT_TYPE)
         {

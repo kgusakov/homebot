@@ -19,3 +19,6 @@ export DOWNLOADER_SOCKS_PROXY=
 export DOWNLOADER_YT_DLP_PATH=
 export DOWNLOADER_YT_DLP_OPTS=
 export DOWNLOADER_COOKIES_PATH=
+
+# socks proxy for internal http client to check urls and etc.
+export SOCKS_PROXY=
