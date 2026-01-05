@@ -83,19 +83,24 @@ impl<'a> DownloaderHandler<'a> {
     }
 
     async fn process_url(&self, chat_id: &str, message_id: &i64, url: &str) -> Result<()> {
-        let video_id = self.extract_id(url)?;
-
         let message_download_tmp_dir = self.tmp_dir.join(format!("tmp_{}", message_id));
 
         create_dir(message_download_tmp_dir.as_path()).await?;
 
-        // TODO check that * doesn't produce multiple files and etc.
-        let download_path = message_download_tmp_dir.join(format!("{}.*", video_id));
+        let download_path = message_download_tmp_dir.join(format!("%(id)s.%(ext)s",));
 
-        self.download(url, download_path.as_path()).await?;
+        let downloaded_file_path: PathBuf = String::from_utf8(
+            self.download(url, &download_path)
+                .await
+                .with_context(|| "Can't download video to send via telegram")?
+                .stdout,
+        )
+        .with_context(|| "Can't stringify download path")?
+        .trim()
+        .into();
 
         self.telegram_client
-            .async_send_file(chat_id, download_path)
+            .async_send_file(chat_id, downloaded_file_path)
             .await?;
 
         remove_dir_all(message_download_tmp_dir)?;
@@ -110,6 +115,7 @@ impl<'a> DownloaderHandler<'a> {
                 path.to_str().expect("Failed to convert path to string"),
             ])
             .args(&["--proxy", self.socks_proxy_url.as_str()])
+            .args(&["--print", "after_move:filepath"])
             .args(&[
                 "--cookies",
                 self.cookies_path
