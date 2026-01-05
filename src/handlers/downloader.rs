@@ -6,7 +6,6 @@ use std::{
 };
 
 use async_trait::async_trait;
-use regex::Regex;
 use shlex::Shlex;
 use tokio::{fs::create_dir, process::Command};
 
@@ -16,12 +15,10 @@ use anyhow::anyhow;
 use anyhow::{Context, Result};
 
 const INSTAGRAM_URL_START: &str = "https://www.instagram.com/reel/";
-const YT_URL_START: &str = "https://www.youtube.com/shorts/";
+const YT_URL_CONTAINS: &str = "youtube.com/shorts/";
 
 pub struct DownloaderHandler<'a> {
     telegram_client: &'a TelegramClient<'a>,
-    inst_id_regex: Regex,
-    yt_id_regex: Regex,
     tmp_dir: PathBuf,
     socks_proxy_url: String,
     yt_dlp_path: PathBuf,
@@ -37,7 +34,7 @@ impl<'a> AsyncHandler for DownloaderHandler<'a> {
 
     async fn process(&self, m: &Message) -> Result<()> {
         match &m.text {
-            Some(t) if t.starts_with(INSTAGRAM_URL_START) || t.starts_with(YT_URL_START) => {
+            Some(t) if t.starts_with(INSTAGRAM_URL_START) || t.contains(YT_URL_CONTAINS) => {
                 self.process_url(m.chat.id.to_string().as_str(), &m.message_id, t)
                     .await
             }
@@ -70,10 +67,6 @@ impl<'a> DownloaderHandler<'a> {
 
         Self {
             telegram_client: handler_context.telegram_client,
-            inst_id_regex: Regex::new(r"(v=|reel/)(?P<id>[^/]*)")
-                .expect("Failed to compile video id Regex"),
-            yt_id_regex: Regex::new(r"(v=|shorts/)(?P<id>[^/]*)")
-                .expect("Failed to compile video id Regex"),
             tmp_dir,
             socks_proxy_url,
             yt_dlp_path,
@@ -141,25 +134,5 @@ impl<'a> DownloaderHandler<'a> {
                 res
             ))
         }
-    }
-
-    fn extract_id(&self, s: &str) -> Result<String> {
-        let regex = match s {
-            _ if s.starts_with(INSTAGRAM_URL_START) => Some(&self.inst_id_regex),
-            _ if s.starts_with(YT_URL_START) => Some(&self.yt_id_regex),
-            _ => None,
-        }
-        .ok_or(anyhow!("Didn't find id regex for url {}", s));
-
-        regex?
-            .captures(s)
-            .and_then(|cap| {
-                if let Some(id) = cap.name("id") {
-                    Some(id.as_str().to_string())
-                } else {
-                    None
-                }
-            })
-            .ok_or(anyhow!("Can't parse video id from url {}", s))
     }
 }
