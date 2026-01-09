@@ -146,20 +146,27 @@ impl<'a> TelegramClient<'a> {
         let file_part = reqwest::multipart::Part::bytes(file).file_name(file_name);
         let form = reqwest::multipart::Form::new().part("video", file_part);
 
-        self.async_http_client
+        let response = self
+            .async_http_client
             .post(&self.api_url(&format!("sendVideo?chat_id={}", chat_id)))
             .multipart(form)
             .send()
             .await
-            .with_context(|| format!("Failed to send file with path {:?}", path))?
-            .json()
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to parse response with file upload for file with path {:?}",
-                    path
-                )
-            })
+            .with_context(|| format!("Failed to send file with path {:?}", path))?;
+
+        let response_text = response.text().await.with_context(|| {
+            format!(
+                "Failed to read response body for file upload with path {:?}",
+                path
+            )
+        })?;
+
+        serde_json::from_str(&response_text).with_context(|| {
+            format!(
+                "Failed to parse response with file upload for file with path {:?}, response body: {}",
+                path, response_text
+            )
+        })
     }
 
     pub async fn async_send_message(&self, message: SendMessage<'_>) -> Result<()> {
