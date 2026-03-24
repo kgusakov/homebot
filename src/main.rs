@@ -24,7 +24,16 @@ pub struct HandlerContext<'a> {
 }
 
 lazy_static! {
-    static ref HTTP_CLIENT: blocking::Client = blocking::Client::new();
+    static ref HTTP_CLIENT: blocking::Client = {
+        let proxy = Url::parse(
+            &env::var("SOCKS_PROXY").expect("Provide SOCKS_PROXY environment variable please"),
+        )
+        .expect("Can't parse SOCKS_PROXY url");
+        blocking::Client::builder()
+            .proxy(reqwest::Proxy::all(proxy).expect("Can't initialize socks proxy"))
+            .build()
+            .expect("Error during initializing of http client with socks proxy")
+    };
     static ref ASYNC_HTTP_CLIENT: Client = Client::new();
     static ref ASYNC_PROXY_HTTP_CLIENT: Client = {
         let proxy = Url::parse(
