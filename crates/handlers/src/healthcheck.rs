@@ -1,9 +1,7 @@
-use crate::HandlerContext;
+use handler_core::{AsyncHandler, HandlerContext};
 use telegram_api::{Message, SendMessage, TelegramClient};
 
 use async_trait::async_trait;
-
-use super::AsyncHandler;
 
 use anyhow::Result;
 

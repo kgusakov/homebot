@@ -6,11 +6,10 @@ use std::{
 };
 
 use async_trait::async_trait;
+use handler_core::{AsyncHandler, HandlerContext};
 use shlex::Shlex;
-use telegram_api::Message;
+use telegram_api::{Message, TelegramClient};
 use tokio::{fs::create_dir, process::Command};
-
-use crate::{HandlerContext, TelegramClient, handlers::AsyncHandler};
 
 use anyhow::anyhow;
 use anyhow::{Context, Result};

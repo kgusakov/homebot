@@ -16,6 +16,8 @@ downloader = []
 
 [dependencies]
 telegram_api.workspace = true
+handlers.workspace = true
+handler_core.workspace = true
 
 reqwest = { version = "0.10", features = ["json", "socks", "blocking"] }
 serde = { version = "1.0.228", features = ["derive"] }

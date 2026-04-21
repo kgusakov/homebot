@@ -2,15 +2,14 @@ mod metadata;
 mod s3_storage;
 mod youtube_sdk;
 
-use super::AsyncHandler;
-use crate::{HandlerContext, TelegramClient};
+use handler_core::{AsyncHandler, HandlerContext};
 use s3_storage::S3Storage;
 use shlex::Shlex;
 use std::time::Duration;
 use std::{
     collections::VecDeque, env, env::temp_dir, fs, path::PathBuf, process::Output, time::SystemTime,
 };
-use telegram_api::{Message, SendMessage, User};
+use telegram_api::{Message, SendMessage, TelegramClient, User};
 use youtube_sdk::YoutubeSdk;
 
 use reqwest::Client;

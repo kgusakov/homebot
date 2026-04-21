@@ -1,8 +1,7 @@
-use super::AsyncHandler;
-use crate::HandlerContext;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use base64::encode;
+use handler_core::{AsyncHandler, HandlerContext};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;

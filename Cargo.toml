@@ -8,9 +8,13 @@ resolver = "3"
 members = [
     "crates/core",
     "crates/telegram_api",
+    "crates/handlers",
+    "crates/handler_core",
 ]
 
 [workspace.dependencies]
 core = { path = "crates/core" }
 telegram_api = { path = "crates/telegram_api" }
+handlers = { path = "crates/handlers" }
+handler_core = { path = "crates/handler_core" }
 
