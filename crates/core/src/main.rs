@@ -3,12 +3,12 @@ use handler_core::Handler;
 use handler_core::HandlerContext;
 use log::error;
 
-use handlers::downloader::DownloaderHandler;
-use handlers::healthcheck;
-use handlers::torrent;
-use handlers::youtube2rss;
+use downloader::DownloaderHandler;
+use healthcheck;
 use telegram_api::Message;
 use telegram_api::SendMessage;
+use torrent;
+use youtube2rss;
 
 use std::sync::mpsc::{Sender, channel};
 use std::thread::spawn;

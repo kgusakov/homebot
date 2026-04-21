@@ -1,14 +1,7 @@
 [package]
-name = "handlers"
+name = "downloader"
 version.workspace = true
 edition.workspace = true
-
-[features]
-default = ["healthcheck"]
-healthcheck = []
-torrent = []
-youtube2rss = []
-downloader = []
 
 [dependencies]
 telegram_api.workspace = true
