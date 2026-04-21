@@ -215,14 +215,7 @@ impl<'a> PodcastHandler<'a> {
         let channel = ChannelBuilder::default()
             .title(format!("Куточок {}", user))
             .items(items)
-            .build()
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to build rss channel for user {} with error {}",
-                    user,
-                    e
-                )
-            })?;
+            .build();
         Ok(channel.to_string())
     }
 

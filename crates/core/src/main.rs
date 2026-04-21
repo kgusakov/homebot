@@ -60,8 +60,7 @@ lazy_static! {
         async_http_client: &ASYNC_HTTP_CLIENT,
         async_proxy_http_client: &ASYNC_PROXY_HTTP_CLIENT,
     };
-    static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new()
-        .threaded_scheduler()
+    static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("Error while trying to create tokio runtime");

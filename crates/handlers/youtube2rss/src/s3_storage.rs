@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
-use rusoto_s3::{GetObjectRequest, PutObjectRequest, S3Client, S3};
+use rusoto_s3::{GetObjectRequest, PutObjectRequest, S3, S3Client};
 use std::env;
 use std::io::Read;
 use std::path::PathBuf;
-use tokio::prelude::*;
+use tokio::io::AsyncReadExt;
 
 pub struct S3Storage {
     bucket_name: String,

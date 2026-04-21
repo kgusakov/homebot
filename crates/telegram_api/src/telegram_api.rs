@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use bytes::Bytes;
-use reqwest::{blocking, multipart::Part, Client};
+use reqwest::{Client, blocking, multipart::Part};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 
