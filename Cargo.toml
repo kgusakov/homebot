@@ -24,3 +24,30 @@ torrent = { path = "crates/handlers/torrent" }
 youtube2rss = { path = "crates/handlers/youtube2rss" }
 healthcheck = { path = "crates/handlers/healthcheck" }
 
+
+reqwest = { version = "0.10", features = ["json", "socks", "blocking"] }
+serde_json = "1.0"
+
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "0.2", features = ["full"] }
+
+log = "0.4"
+env_logger = "0.7.1"
+
+futures = { version = "0.3", features = ["compat"] }
+
+anyhow = "1.0.31"
+
+lazy_static = "1.4.0"
+
+async-trait = "0.1.36"
+
+shlex = "1.3.0"
+base64 = "0.12.1"
+chrono = "0.4.11"
+regex = "1"
+rmp-serde = "1.3.1"
+rss = "1.9.0"
+rusoto_s3 = "0.44"
+rusoto_core = "0.44"
+bytes = "0.5.4"
