@@ -1,49 +1,19 @@
-[package]
+[workspace.package]
 name = "core"
 version = "0.1.0"
 authors = ["Kirill Gusakov <kgusakov@gmail.com>"]
+# TODO update edition
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-default = ["healthcheck"]
-healthcheck = []
-torrent = []
-youtube2rss = []
-downloader = []
+[workspace]
+# TODO: update resolver to 3
+resolver = "2"
+members = [
+    "crates/core",
+]
 
-[dependencies]
-reqwest = { version = "0.10", features = ["json", "socks", "blocking"] }
-serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "0.2", features = ["full"] }
+[workspace.dependencies]
+core = { path = "crates/core" }
 
-log = "0.4"
-env_logger = "0.7.1"
-
-bytes = "0.5.4"
-
-serde_json = "1.0"
-
-base64 = "0.12.1"
-
-rusoto_s3 = "0.44"
-rusoto_core = "0.44"
-
-regex = "1"
-
-futures = { version = "0.3", features = ["compat"] }
-
-rmp-serde = "1.3.1"
-
-rss = "1.9.0"
-
-anyhow = "1.0.31"
-
-chrono = "0.4.11"
-
-lazy_static = "1.4.0"
-
-async-trait = "0.1.36"
-
-shlex = "1.3.0"
