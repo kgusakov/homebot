@@ -12,6 +12,7 @@ struct Resp {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Item {
+    #[expect(unused)]
     pub id: String,
     pub snippet: Snippet,
 }
@@ -19,9 +20,12 @@ struct Item {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snippet {
+    #[expect(unused)]
     pub published_at: String,
+    #[expect(unused)]
     pub channel_id: String,
     pub title: String,
+    #[expect(unused)]
     pub description: String,
 }
 

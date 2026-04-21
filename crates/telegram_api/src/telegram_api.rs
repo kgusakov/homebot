@@ -1,8 +1,8 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use bytes::Bytes;
-use reqwest::{Client, blocking, multipart::Part};
+use reqwest::{Client, blocking};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 

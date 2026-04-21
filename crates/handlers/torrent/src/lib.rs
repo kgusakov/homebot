@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use base64::encode;
+use base64::prelude::*;
 use handler_core::{AsyncHandler, HandlerContext};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -103,6 +103,7 @@ struct Request {
 
 #[derive(Deserialize, Debug)]
 struct Response {
+    #[expect(unused)]
     result: String,
     arguments: ResponseArguments,
 }
@@ -110,10 +111,18 @@ struct Response {
 #[derive(Deserialize, Debug)]
 enum ResponseArguments {
     #[serde(rename = "torrent-duplicate")]
-    TorerntDuplicate { id: i32, name: String },
+    TorerntDuplicate {
+        #[expect(unused)]
+        id: i32,
+        name: String,
+    },
 
     #[serde(rename = "torrent-added")]
-    TorerntAdded { id: i32, name: String },
+    TorerntAdded {
+        #[expect(unused)]
+        id: i32,
+        name: String,
+    },
 }
 
 impl<'a> TransmissionClient<'a> {
@@ -172,7 +181,7 @@ impl<'a> TransmissionClient<'a> {
     }
 
     pub async fn torrent_add(&self, file_content: &[u8]) -> Result<Response> {
-        let base64_encoded = encode(file_content);
+        let base64_encoded = BASE64_STANDARD.encode(file_content);
         let request = Request {
             method: "torrent-add".to_string(),
             arguments: RequestArguments::TorrentAdd {

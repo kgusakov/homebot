@@ -3,12 +3,9 @@ use handler_core::Handler;
 use handler_core::HandlerContext;
 use log::error;
 
-use downloader::DownloaderHandler;
 use healthcheck;
 use telegram_api::Message;
 use telegram_api::SendMessage;
-use torrent;
-use youtube2rss;
 
 use std::sync::mpsc::{Sender, channel};
 use std::thread::spawn;
@@ -79,7 +76,9 @@ lazy_static! {
         handlers.push(Box::new(youtube2rss::PodcastHandler::new(&HANDLER_CONTEXT)));
 
         #[cfg(feature = "downloader")]
-        handlers.push(Box::new(DownloaderHandler::new(&HANDLER_CONTEXT)));
+        handlers.push(Box::new(downloader::DownloaderHandler::new(
+            &HANDLER_CONTEXT,
+        )));
 
         handlers
     };
