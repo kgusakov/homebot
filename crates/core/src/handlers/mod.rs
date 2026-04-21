@@ -7,19 +7,19 @@ mod torrent;
 #[cfg(feature = "youtube2rss")]
 mod youtube2rss;
 
-use crate::handlers::downloader::DownloaderHandler;
-use crate::telegram_api::{Message, SendMessage, TelegramClient, Update};
 use crate::HANDLER_CONTEXT;
+use crate::handlers::downloader::DownloaderHandler;
+use telegram_api::{Message, SendMessage, TelegramClient, Update};
 
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use log::error;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::{Sender, channel};
 use std::thread::spawn;
 use tokio;
 
-use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
+use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 
 trait Handler {
     fn name(&self) -> String;
@@ -58,35 +58,37 @@ lazy_static! {
 
 pub fn init_sync_handlers_loop() -> Sender<Update> {
     let (tx, rx) = channel::<Update>();
-    spawn(move || loop {
-        match rx.recv() {
-            Ok(
-                ref upd @ Update {
-                    update_id: u_id,
-                    message: ref m,
-                },
-            ) => {
-                for handler in SYNC_HANDLERS.iter() {
-                    if let Some(ref message) = m {
-                        if let Err(e) = handler.process(&message) {
-                            error!(
+    spawn(move || {
+        loop {
+            match rx.recv() {
+                Ok(
+                    ref upd @ Update {
+                        update_id: u_id,
+                        message: ref m,
+                    },
+                ) => {
+                    for handler in SYNC_HANDLERS.iter() {
+                        if let Some(message) = m {
+                            if let Err(e) = handler.process(&message) {
+                                error!(
                                     "Problem while processing update {:?} by handler {} with error: {:?}",
                                     &message,
                                     handler.name(),
                                     e
                                 );
-                            send_error_message(
-                                &upd.update_id,
-                                message,
-                                &handler.name(),
-                                HANDLER_CONTEXT.telegram_client,
-                            );
+                                send_error_message(
+                                    &upd.update_id,
+                                    message,
+                                    &handler.name(),
+                                    HANDLER_CONTEXT.telegram_client,
+                                );
+                            }
                         }
+                        ack_update(&handler.name(), &u_id);
                     }
-                    ack_update(&handler.name(), &u_id);
                 }
+                _ => panic!("Unexpected end of stream for async processing"),
             }
-            _ => panic!("Unexpected end of stream for async processing"),
         }
     });
     tx

@@ -1,7 +1,5 @@
-use crate::{
-    telegram_api::{Message, SendMessage, TelegramClient},
-    HandlerContext,
-};
+use crate::HandlerContext;
+use telegram_api::{Message, SendMessage, TelegramClient};
 
 use async_trait::async_trait;
 

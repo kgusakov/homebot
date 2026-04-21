@@ -1,7 +1,6 @@
 use log::error;
 
 mod handlers;
-mod telegram_api;
 
 use handlers::{init_async_handlers_loop, init_sync_handlers_loop};
 use reqwest::Url;
@@ -11,11 +10,12 @@ use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
 use std::iter::FromIterator;
-use telegram_api::*;
+use telegram_api::TelegramClient;
+use telegram_api::Update;
 
 use lazy_static::lazy_static;
 
-use reqwest::{blocking, Client};
+use reqwest::{Client, blocking};
 
 pub struct HandlerContext<'a> {
     telegram_client: &'a TelegramClient<'a>,

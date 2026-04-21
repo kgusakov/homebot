@@ -1,5 +1,4 @@
 use super::AsyncHandler;
-use crate::telegram_api::*;
 use crate::HandlerContext;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -7,6 +6,7 @@ use base64::encode;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
+use telegram_api::{Message, SendMessage, TelegramClient};
 
 pub struct TorrentHandler<'a> {
     telegram_client: &'a TelegramClient<'a>,

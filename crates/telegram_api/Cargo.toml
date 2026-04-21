@@ -1,0 +1,12 @@
+[package]
+name = "telegram_api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+reqwest = { version = "0.10", features = ["json", "socks", "blocking"] }
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "0.2", features = ["full"] }
+anyhow = "1.0.31"
+bytes = "0.5.4"
+serde_json = "1.0"
