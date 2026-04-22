@@ -25,6 +25,8 @@ use rss::{Enclosure, Item as RItem};
 use chrono::DateTime;
 use chrono::offset::Utc;
 
+use log::warn;
+
 use anyhow::anyhow;
 use anyhow::{Context, Result};
 
@@ -152,14 +154,6 @@ impl<'a> PodcastHandler<'a> {
                 .trim()
                 .into();
 
-        let s3_result_file_path = format!("{}/{}.{}", data_path(&username), &video_id, extension);
-        self.s3_client
-            .upload_file(
-                downloaded_file_path.to_path_buf(),
-                s3_result_file_path.to_string(),
-            )
-            .await?;
-
         let file_size = {
             let metadata = fs::metadata(
                 downloaded_file_path
@@ -168,6 +162,26 @@ impl<'a> PodcastHandler<'a> {
             )?;
             metadata.len()
         };
+
+        let s3_result_file_path = format!("{}/{}.{}", data_path(&username), &video_id, extension);
+        let upload_result = self
+            .s3_client
+            .upload_file(
+                downloaded_file_path.to_path_buf(),
+                s3_result_file_path.to_string(),
+            )
+            .await;
+
+        if let Err(e) = fs::remove_file(&downloaded_file_path) {
+            warn!(
+                "Failed to remove temporary file {}: {}",
+                downloaded_file_path.display(),
+                e
+            );
+        }
+
+        upload_result?;
+
         if let Some(video_info) = self.youtube_sdk.get_video_info(&video_id).await? {
             let video_metadata = VideoMetadata {
                 file_size,
