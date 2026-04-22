@@ -3,7 +3,6 @@ use handler_core::Handler;
 use handler_core::HandlerContext;
 use log::error;
 
-use healthcheck;
 use telegram_api::Message;
 use telegram_api::SendMessage;
 

@@ -9,18 +9,18 @@ path = "src/main.rs"
 
 [features]
 default = ["healthcheck"]
-healthcheck = []
-torrent = []
-youtube2rss = []
-downloader = []
+healthcheck = ["dep:healthcheck"]
+torrent = ["dep:torrent"]
+youtube2rss = ["dep:youtube2rss"]
+downloader = ["dep:downloader"]
 
 [dependencies]
 telegram_api.workspace = true
 handler_core.workspace = true
-downloader.workspace = true
-healthcheck.workspace = true
-torrent.workspace = true
-youtube2rss.workspace = true
+downloader = { workspace = true, optional = true }
+healthcheck = { workspace = true, optional = true }
+torrent = { workspace = true, optional = true }
+youtube2rss = { workspace = true, optional = true }
 
 reqwest.workspace = true
 serde.workspace = true 
