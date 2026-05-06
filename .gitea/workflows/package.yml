@@ -10,7 +10,7 @@ jobs:
       - run: apk update
       - uses: actions/checkout@v4
       - name: Restore cargo cache
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
@@ -22,7 +22,7 @@ jobs:
       - name: Build binary
         run: cargo build --release --features "healthcheck torrent downloader youtube2rss"
       - name: Save cargo cache
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@v4
         with:
           path: |
             ~/.cargo/registry
