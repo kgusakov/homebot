@@ -1,0 +1,21 @@
+name: Build CI Image
+
+on:
+  workflow_dispatch:
+    paths:
+      - ci/Dockerfile
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to registry
+        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ vars.REGISTRY }} -u ${{ gitea.actor }} --password-stdin
+
+      - name: Build and push
+        run: |
+          docker build -t ${{ vars.REGISTRY }}/${{ gitea.repository }}/ci:latest ci/
+          docker push ${{ vars.REGISTRY }}/${{ gitea.repository }}/ci:latest
