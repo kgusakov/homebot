@@ -9,8 +9,26 @@ jobs:
     steps:
       - run: apk update
       - uses: actions/checkout@v4
+      - name: Restore cargo cache
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: cargo-${{ gitea.run_id }}
+          restore-keys: |
+            cargo-
       - name: Build binary
         run: cargo build --release --features "healthcheck torrent downloader youtube2rss"
+      - name: Save cargo cache
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: cargo-${{ gitea.run_id }}
       - name: Build Apline APK
         working-directory: ./packages
         run: |
